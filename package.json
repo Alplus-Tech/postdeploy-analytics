@@ -1,0 +1,63 @@
+{
+  "name": "postdeploy-analytics",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npm run build && wrangler dev --ip 127.0.0.1 --port 8787 --var ENVIRONMENT:development --var APP_ORIGIN:http://127.0.0.1:8787",
+    "db:migrate": "wrangler d1 migrations apply DB --local",
+    "seed": "node worker/scripts/seed.mjs",
+    "test": "node --test \"worker/test/*.test.mjs\"",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.frontend.json",
+    "recover": "node worker/scripts/recover.mjs",
+    "build": "esbuild frontend/auth.ts frontend/marketing.ts frontend/organisations.ts frontend/privacy.ts frontend/goals.ts frontend/insights.ts --bundle --format=iife --target=es2022 --outdir=demo/js && node worker/scripts/build-notices.mjs",
+    "deploy": "node worker/scripts/deploy.mjs",
+    "storage:compact": "node worker/scripts/compact-storage.mjs",
+    "storage:headroom": "node worker/scripts/storage-headroom.mjs",
+    "storage:export": "node worker/scripts/compact-export.mjs",
+    "setup": "node worker/scripts/self-host.mjs",
+    "test:install": "node worker/test/self-host-local.mjs",
+    "backup": "node worker/scripts/backup.mjs",
+    "licenses:inventory": "node worker/scripts/dependency-inventory.mjs",
+    "release:source": "node worker/scripts/source-release.mjs",
+    "test:acceptance": "node worker/scripts/acceptance-local.mjs",
+    "test:history": "node worker/scripts/acceptance-history.mjs"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261104.1",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2",
+    "wrangler": "4.157.0"
+  },
+  "dependencies": {
+    "bcryptjs": "3.0.3"
+  },
+  "license": "MIT",
+  "description": "Self-hosted web analytics for Cloudflare Workers and D1",
+  "engines": {
+    "node": ">=24.22.0 <25",
+    "npm": ">=11 <12"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Alplus-Tech/postdeploy-analytics.git"
+  },
+  "homepage": "https://analytics.postdeploy.dev",
+  "bugs": {
+    "url": "https://github.com/Alplus-Tech/postdeploy-analytics/issues"
+  },
+  "cloudflare": {
+    "bindings": {
+      "DB": {
+        "description": "Your private analytics database. Cloudflare provisions it and the deploy command applies migrations using this binding."
+      },
+      "BOOTSTRAP_SECRET": {
+        "description": "Generate a random setup secret of at least 32 characters, for example `openssl rand -hex 32`. Keep it private; use it once at `/auth`, then remove it after creating the owner."
+      },
+      "APP_ORIGIN": {
+        "description": "The exact final HTTPS origin of your own Worker, such as `https://postdeploy-team.your-subdomain.workers.dev`, without a path or trailing slash. Set this to your own origin, never analytics.postdeploy.dev. Authentication fails closed until it matches."
+      }
+    }
+  },
+  "packageManager": "npm@11.19.1"
+}

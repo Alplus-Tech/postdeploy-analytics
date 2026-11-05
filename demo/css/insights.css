@@ -1,0 +1,25 @@
+.insight-section{padding:28px;margin:32px 0;scroll-margin-top:90px}
+.insight-section h2{font-size:22px;margin-bottom:12px}
+.insight-section p{max-width:75ch;margin:12px 0 20px;font-size:14px}
+.insight-section details{margin:20px 0}
+.insight-section summary{cursor:pointer;padding:10px 0;font-weight:550}
+.insight-chart{display:block;width:100%;height:auto;min-height:180px;touch-action:pan-y}
+.insight-chart text{font-size:13px;fill:var(--color-ink)}
+.insight-legend{display:flex;flex-wrap:wrap;gap:12px 24px;margin:20px 0}
+.insight-legend label{display:flex;align-items:center;gap:6px;max-width:100%;overflow-wrap:anywhere;font-size:14px}
+.insight-legend span{width:16px;height:16px;flex-shrink:0}
+.inspect{display:grid;gap:8px;max-width:700px;font-size:14px}
+.inspect input{width:100%;min-height:36px}
+.inspection{min-height:44px;font-variant-numeric:tabular-nums}
+.insight-summary{font-size:18px;margin:32px 0 20px;font-variant-numeric:tabular-nums}
+.insight-sections{gap:24px;flex-wrap:wrap}
+.ranked-bars{display:grid;gap:16px;margin:24px 0}
+.rank>div:first-child{display:flex;gap:16px;justify-content:space-between;font-size:14px;align-items:baseline}
+.rank a{overflow-wrap:anywhere;min-width:0}.rank>div>span{white-space:nowrap;font-variant-numeric:tabular-nums}
+.rank-track{background:var(--color-paper-3);height:10px;margin-top:6px}.rank-track span{display:block;background:#16866c;height:10px}
+.heatmap{display:grid;grid-template-columns:40px repeat(24,minmax(20px,1fr));gap:4px;min-width:650px;margin:20px 0}.heatmap>span{font-size:11px;text-align:center}.heat{height:24px;border:1px solid var(--color-rule)}
+.histogram{display:flex;gap:10px;align-items:end;margin:32px 0;min-height:220px}.histogram>div{flex:1;min-width:0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;font-size:12px}.hist-bar{width:75%;background:#16866c;min-height:1px}
+.org-controls .wide{flex-basis:300px}.org-scroll table{font-variant-numeric:tabular-nums}.org-scroll th{overflow-wrap:anywhere;max-width:360px}
+@media(max-width:600px){.insight-section{padding:20px 12px}.insight-section h2{font-size:20px}.insight-chart{min-height:0}.topbar nav{font-size:12px}.topbar .container{gap:8px}.topbar button{padding:8px}.rank>div:first-child{gap:8px}.histogram{gap:4px}.histogram>div{font-size:11px}.org-controls .wide{flex-basis:100%}}
+.insight-sections{display:flex;gap:12px 24px}.insight-sections a{padding:6px 0}.insight-section .btn{margin:4px 0}
+@media(max-width:600px){.insight-chart text{font-size:24px}.insight-section .inspection{min-height:64px}}

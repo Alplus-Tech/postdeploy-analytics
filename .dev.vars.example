@@ -1,0 +1,8 @@
+# Generate privately with: openssl rand -hex 32
+# Use for first-owner setup at /auth, then remove the deployed secret.
+BOOTSTRAP_SECRET=""
+# Exact HTTPS origin of YOUR installation; no path or trailing slash.
+# Cloudflare prompts for this value. Local npm run dev overrides it for loopback.
+APP_ORIGIN=""
+# Optional Email: onboard a sender, add the EMAIL send_email binding and
+# configure EMAIL_FROM afterwards. It is not required for initial password login.

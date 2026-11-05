@@ -1,0 +1,24 @@
+:root {
+  --space-3xs: 2px; --space-2xs: 4px; --space-xs: 8px; --space-sm: 12px; --space-md: 16px; --space-lg: 24px; --space-xl: 40px; --space-2xl: 64px; --space-3xl: 96px; --space-4xl: 144px;
+  --text-xs: 0.8125rem; --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.125rem; --text-xl: 1.266rem; --text-2xl: 1.602rem; --text-3xl: 2.027rem;
+  --text-display-s: 1.44rem; --text-display: 1.728rem; --text-section: 1.2rem; --text-title: 1rem; --text-lead: 1rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); --ease-in: cubic-bezier(0.7, 0, 0.84, 0); --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms; --dur-short: 220ms; --dur-long: 420ms;
+  --color-error: #A12D24; --color-success: oklch(50% 0.12 150);
+  --container: 1280px; --gutter: 40px; --gap-columns: 32px; --section-gap-s: 120px; --section-gap: 144px; --section-gap-l: 176px;
+  --z-base: 1; --z-raised: 10; --z-dropdown: 100; --z-sticky: 200; --z-sticky-nav: 300; --z-modal: 400; --z-toast: 500; --z-tooltip: 600;
+  --color-paper: #F5F6F1; --color-paper-2: #FFFFFF; --color-paper-3: #ECEEE8;
+  --color-ink: #171B12; --color-ink-2: #4C5445; --color-muted: #5E6656;
+  --color-rule: #ECEEE8; --color-rule-strong: #D8DCD1;
+  --color-accent: #C0DF16; --color-accent-deep: #ADC916; --color-accent-ink: #171B12; --color-focus: #2E62E8;
+  --color-accent-soft: #F1F8C9; --color-accent-mid: #DCEC85; --color-accent-strong: #5B6B00; --color-logo-period: #8FA80E;
+  --color-share-1: #5B6B00; --color-share-2: #8FA80E; --color-share-3: #ADC916; --color-share-4: #C0DF16; --color-share-5: #DCEC85;
+  --color-compare: #868D7D; --color-field-edge: #868D7D; --color-success-soft: #E5F3EA; --color-error-soft: #F8E6E4;
+  --color-warning: #B7791F; --color-scrim: rgb(23 27 18 / 0.32); --color-code: #171B12; --color-code-ink: #E5E9DF;
+  --color-on-dark-hover: rgb(255 255 255 / 0.1); --color-on-dark-press: rgb(255 255 255 / 0.18); --color-on-dark-rule: rgb(255 255 255 / 0.25); --color-chip-hover: rgb(255 255 255 / 0.7);
+  --font-display: "Onest", ui-sans-serif, system-ui, sans-serif; --font-brand: "Open Runde", var(--font-body); --font-body: "Onest", ui-sans-serif, system-ui, sans-serif; --font-outlier: var(--font-body);
+  --font-code: ui-monospace, "SFMono-Regular", "Cascadia Mono", "DejaVu Sans Mono", monospace;
+  --radius-card: 18px; --radius-control: 10px; --radius-inner: 12px; --radius-pill: 999px; --rule-hair: 1px;
+  --shadow-card: 0 1px 2px oklch(23% 0.025 268 / 0.04); --shadow-pop: 0 12px 32px -8px oklch(23% 0.025 268 / 0.18), 0 2px 6px oklch(23% 0.025 268 / 0.06);
+  --tracking-display: -0.02em;
+}

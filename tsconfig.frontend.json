@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "target": "es2024", "lib": ["es2024", "DOM", "DOM.Iterable"],
+    "module": "esnext", "moduleResolution": "bundler", "strict": true,
+    "noUncheckedIndexedAccess": true, "allowImportingTsExtensions": true, "noEmit": true, "types": []
+  },
+  "include": ["frontend"]
+}

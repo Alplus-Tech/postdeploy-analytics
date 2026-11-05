@@ -1,0 +1,26 @@
+[
+  {
+    "path": "assets/icon.svg",
+    "sha256": "1732d948e3a6f0a7f58bc90a715aebcfeb901e5dc0217588812d4d50edbf711d"
+  },
+  {
+    "path": "demo/icon.svg",
+    "sha256": "1732d948e3a6f0a7f58bc90a715aebcfeb901e5dc0217588812d4d50edbf711d"
+  },
+  {
+    "path": "demo/fonts/onest.woff2",
+    "sha256": "052df74533250c2e0ca0c4bdd32de594e107d99c1648e63820ef9c6142067828"
+  },
+  {
+    "path": "demo/fonts/open-runde-700.woff2",
+    "sha256": "9a64eabe53890050c4606ca2def75c0f7b78e5bfb1e45b1ee59951f30ceae79a"
+  },
+  {
+    "path": "demo/fonts/OFL.txt",
+    "sha256": "a2a09da98a3d0d1ec79fc2d6deeac748b20a8153e26699552e7b59b5a40b63a3"
+  },
+  {
+    "path": "demo/fonts/OFL-open-runde.txt",
+    "sha256": "262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a"
+  }
+]

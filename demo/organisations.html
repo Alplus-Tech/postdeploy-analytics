@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Organisations · PostDeploy Analytics</title>
+<link rel="icon" href="icon.svg">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/organisations.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+<div class="container">
+<a class="wordmark" href="/organisations">
+<img src="icon.svg" width="28" height="28" alt="">
+<span>postdeploy.</span>
+</a>
+<nav aria-label="Installation">
+<a href="/dashboard#/overview">Project reports</a>
+</nav>
+<button class="btn btn-ghost" id="logout">Sign out</button>
+</div>
+</header>
+<main id="main" class="container" tabindex="-1">
+<div class="page-head">
+<div>
+<h1>Organisations</h1>
+<p class="muted">Combined traffic, with every project a click away.</p>
+</div>
+</div>
+<p id="status" role="status">Loading organisations…</p>
+<div id="workspace" hidden>
+<form id="controls" class="org-controls">
+<div class="field">
+<label for="organisation">Organisation</label>
+<select class="input" id="organisation" name="organisation">
+</select>
+</div>
+<div class="field">
+<label for="from">From (UTC)</label>
+<input class="input" id="from" name="from" type="date" required>
+</div>
+<div class="field">
+<label for="to">To (UTC)</label>
+<input class="input" id="to" name="to" type="date" required>
+</div>
+<div class="field">
+<label for="dimension">Filter by</label>
+<select class="input" id="dimension" name="dimension">
+<option value="source">Source</option>
+<option value="page">Page visited</option>
+<option value="country">Country</option>
+<option value="device">Device</option>
+<option value="browser">Browser</option>
+<option value="campaign">Campaign</option>
+<option value="referrer">Referrer</option>
+<option value="entry">Entry page</option>
+</select>
+</div>
+<div class="field">
+<label for="value">Exact value (optional)</label>
+<input class="input" id="value" name="value" maxlength="300">
+</div>
+<div class="field">
+<label for="compare">Compare</label>
+<select class="input" id="compare" name="compare">
+<option value="prev">Previous period</option>
+<option value="off">Off</option>
+</select>
+</div>
+<button class="btn btn-primary" type="submit">Apply</button>
+</form>
+<div id="report" aria-live="polite">
+</div>
+<section class="panel org-management" id="management" hidden>
+<div class="panel-head">
+<h2>Manage organisations and projects</h2>
+</div>
+<div class="panel-body stack">
+<form id="new-org" class="org-form">
+<div class="field">
+<label for="org-name">New organisation name</label>
+<input class="input" id="org-name" name="name" maxlength="80" required>
+</div>
+<button class="btn" type="submit">Create organisation</button>
+</form>
+<form id="rename-org" class="org-form">
+<div class="field">
+<label for="rename">Selected organisation name</label>
+<input class="input" id="rename" name="name" maxlength="80" required>
+</div>
+<button class="btn" type="submit">Rename organisation</button>
+</form>
+<form id="new-project" class="org-form">
+<div class="field">
+<label for="project-name">Project name</label>
+<input class="input" id="project-name" name="name" maxlength="80" required>
+</div>
+<div class="field">
+<label for="domain">Website domain</label>
+<input class="input" id="domain" name="domain" placeholder="example.com" required>
+</div>
+<div class="field">
+<label for="kind">Website type</label>
+<select class="input" id="kind" name="kind">
+<option value="docs">Content</option>
+<option value="store">Store</option>
+<option value="saas">Software</option>
+</select>
+</div>
+<button class="btn" type="submit">Create project in this organisation</button>
+</form>
+<form id="move-project" class="org-form">
+<div class="field">
+<label for="project">Project to move</label>
+<select class="input" id="project" name="project">
+</select>
+</div>
+<div class="field">
+<label for="destination">Destination organisation</label>
+<select class="input" id="destination" name="destination">
+</select>
+</div>
+<button class="btn" type="submit">Move project</button>
+</form>
+<p class="muted">Moving a project carries all of its history. Organisations group reports; all installation users can read every project. Projects with history cannot be deleted.</p>
+</div>
+</section>
+</div>
+</main>
+<script src="js/auth.js">
+</script>
+<script src="js/organisations.js">
+</script>
+</body>
+</html>

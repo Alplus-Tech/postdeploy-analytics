@@ -1,0 +1,17 @@
+.auth-shell { width: min(100% - 32px, 460px); margin: clamp(32px, 10vh, 96px) auto; }
+.auth-shell > .wordmark { display: inline-flex; margin-bottom: 32px; }
+.auth-panel { background: var(--color-paper-2); padding: clamp(24px, 5vw, 40px); border-radius: 16px; border: 1px solid var(--color-rule-strong); }
+.auth-panel h1 { font-size: var(--text-2xl); }
+.auth-panel form { margin-top: 12px; }
+.auth-panel .input { width: 100%; min-width: 0; }
+.auth-panel p[role="alert"] { color: var(--color-error); }
+.auth-links { display: flex; justify-content: center; }
+.table-scroll { overflow-x: auto; }
+
+@media (max-width: 40rem) {
+  .auth-users thead { display: none; }
+  .auth-users tr { display: grid; gap: 8px; padding-block: 16px; border-bottom: 1px solid var(--color-rule); }
+  .auth-users td { height: auto; padding: 0; border: 0; overflow-wrap: anywhere; white-space: normal; }
+  .auth-users td[data-label]::before { content: attr(data-label); display: inline-block; min-width: 64px; color: var(--color-muted); }
+  .auth-users select { max-width: calc(100% - 72px); }
+}

@@ -1,0 +1,38 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "postdeploy-analytics",
+  "main": "worker/src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./demo",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/",
+      "/demo",
+      "/dashboard",
+      "/dashboard.html",
+      "/organisations",
+      "/organisations.html",
+      "/insights",
+      "/insights.html",
+      "/api/*",
+      "/script.js"
+    ]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "postdeploy-analytics",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "triggers": {
+    "crons": [
+      "17 * * * *"
+    ]
+  },
+  "vars": {
+    "ENVIRONMENT": "production"
+  }
+}
