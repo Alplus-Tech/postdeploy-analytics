@@ -543,6 +543,7 @@ async function init(): Promise<void> {
     if (from > to) { node('range-error').textContent = 'The start date must be on or before the end date.'; return; }
     const compare = node<HTMLSelectElement>('compare').value === 'prev';
     sel = { ...sel, from, to, cmp: compare ? comparison(from, to) : null, f: field('f').value.trim() };
+    cache.clear();
     load(true);
   });
   node('filter-toggle').addEventListener('click', () => {
