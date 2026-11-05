@@ -72,3 +72,21 @@ test('a stalled SQL wait ends explicitly and never starts the next query',async(
  const verdict=assert.rejects(()=>readSection(stream,()=>{}),/query took too long/);
  t.mock.timers.tick(25000);await verdict;assert.equal(calls,1);
 });
+
+test('render errors remain retryable when partial rendering replaces the status node',async()=>{
+ const native=globalThis.fetch,doc=globalThis.document;
+ let attempts=0,drawn;
+ const parent={isConnected:true,child:null,replaceChildren(node){this.child=node;node.isConnected=true;}};
+ const target={parentElement:parent,isConnected:true,textContent:'',setAttribute(){},append(_space,button){this.button=button;}};
+ parent.child=target;
+ globalThis.fetch=async()=>Response.json({completions:2});
+ globalThis.document={createElement:()=>({addEventListener(_event,fn){this.click=fn;}})};
+ const loader=new SectionLoader(),tick=()=>new Promise(r=>setImmediate(r));
+ try{
+  loader.enqueue('goals',target,value=>{if(++attempts===1){parent.child=null;target.isConnected=false;throw Error('Incomplete section metadata');}drawn=value;});
+  await tick();
+  assert.equal(parent.child,target,'The error and Retry must remain attached to the visible section');
+  assert.equal(target.textContent,'Incomplete section metadata');
+  target.button.click();await tick();assert.deepEqual(drawn,{completions:2});
+ }finally{loader.stop();globalThis.fetch=native;globalThis.document=doc;}
+});

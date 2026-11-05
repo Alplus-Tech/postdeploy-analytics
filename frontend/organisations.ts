@@ -1,7 +1,12 @@
 import { SectionLoader } from './section-loader';
-import type { Organisation, OrganisationReport } from "../worker/src/organisations";
+import type { Organisation, OrganisationPeriod, OrganisationReport } from "../worker/src/organisations";
+import { DIMENSIONS, change, duration, exportAddress, insightsAddress, niceMax, pageAddress, presetFor, presetRange, projectReportAddress, rangeLabel, readSelection, reportQuery, shortDay, type Preset, type Selection } from './organisation-view';
 
 type Project = { id: string; name: string; organisationId: string };
+type Section = 'summary' | 'compare' | 'series' | 'seriesCompare' | 'goals' | 'measurement';
+type Results = { summary?: OrganisationPeriod; compare?: OrganisationPeriod; series?: OrganisationPeriod; seriesCompare?: OrganisationPeriod; goals?: OrganisationPeriod; measurement?: OrganisationPeriod };
+type ChartMetric = 'pageviews' | 'visitorDays';
+
 const el = <T extends HTMLElement>(id: string): T => {
   const node = document.getElementById(id);
   if (!node) throw new Error(`Missing ${id}`);
@@ -11,154 +16,497 @@ const input = (id: string): HTMLInputElement => el<HTMLInputElement>(id);
 const select = (id: string): HTMLSelectElement => el<HTMLSelectElement>(id);
 const escape = (value: string | number): string => String(value).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
 const fmt = (n: number): string => n.toLocaleString("en-GB");
-const day = (at: number): string => new Date(at).toISOString().slice(0,10);
-const DAY = 86400000;
+const pct = (n: number): string => `${(n * 100).toFixed(1)}%`;
+const initials = (name: string): string => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase() ?? "").join("") || "?";
+const axis = (v: number): string => v >= 1000 ? `${(v / 1000).toFixed(v % 1000 ? 1 : 0).replace(/\.0$/, "")}k` : fmt(v);
+
 let organisations: Organisation[] = [];
 let projects: Project[] = [];
-const loader = new SectionLoader();
-window.addEventListener('pagehide',()=>loader.stop());
-window.addEventListener('pageshow',event=>{if(event.persisted){restoreSelection();void load();}});
+let admin = false;
+let sel: Selection = readSelection("", Date.now(), "");
+let results: Results = {};
+let chartMetric: ChartMetric = 'pageviews';
+let chartAsTable = false;
 let generation = 0;
-
+let routed = "";
+const loader = new SectionLoader();
+window.addEventListener('pagehide', () => loader.stop());
+window.addEventListener('pageshow', event => { if (event.persisted) { routed = ""; route(); } });
 
 async function api<T>(path: string, method = "GET", body?: unknown): Promise<T> {
-  const headers: Record<string,string> = {"Content-Type":"application/json"};
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
   const csrf = window.PostDeployAuth.csrf;
-  if(csrf) headers["X-CSRF-Token"]=csrf;
-  const response = await fetch(path,{method,headers,credentials:"same-origin",body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
+  if (csrf) headers["X-CSRF-Token"] = csrf;
+  const response = await fetch(path, { method, headers, credentials: "same-origin", body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(15000) });
   const value: unknown = await response.json();
-  if(!response.ok) {
-    if(response.status===401) location.assign("/auth");
+  if (!response.ok) {
+    if (response.status === 401) location.assign("/auth");
     throw new Error(typeof value === "object" && value !== null && "message" in value ? String(value.message) : "The request failed. Try again.");
   }
-  if(typeof value !== "object" || value === null) throw new Error("Unexpected server response.");
+  if (typeof value !== "object" || value === null) throw new Error("Unexpected server response.");
   return value as T;
 }
-function status(message: string, error = false): void {
-  el("status").textContent = message;
-  el("status").dataset.error = String(error);
+function status(message: string, error = false, id = "status"): void {
+  el(id).textContent = message;
+  el(id).dataset.error = String(error);
 }
-function options(): void {
-  select("organisation").innerHTML = organisations.map(o => `<option value="${escape(o.id)}">${escape(o.name)}</option>`).join("");
-  select("destination").innerHTML = select("organisation").innerHTML;
-  select("project").innerHTML = projects.map(p => `<option value="${escape(p.id)}">${escape(p.name)} — ${escape(organisations.find(o => o.id === p.organisationId)?.name ?? "")}</option>`).join("");
-}
-function render(data: OrganisationReport, query: URLSearchParams): void {
+const orgName = (id: string): string => organisations.find(o => o.id === id)?.name ?? id;
+const validOrg = (): boolean => organisations.some(o => o.id === sel.org);
 
-  const width = Math.max(300, Math.min(1000,el("render-buffer").clientWidth-72));
-  const previous = data.prev;
-  const max = Math.max(1, ...data.main.buckets.map(b=>b.pageviews), ...(previous?.buckets.map(b=>b.pageviews) ?? []));
-  const x = (i: number): number => 45 + i * (width-65) / Math.max(1,data.main.buckets.length-1);
-  const y = (n: number): number => 205 - n/max*170;
-  const line = (values: {pageviews:number}[]): string => values.map((b,i)=>`${x(i)},${y(b.pageviews)}`).join(" ");
-  const m = data.main.measurement;
-  const current = data.main.totals.pageviews;
-  const prior = previous?.totals.pageviews;
-  const delta = prior === undefined ? "" : prior === 0 ? (current ? "No previous traffic for a percentage comparison" : "No traffic in either period") : `${((current-prior)/prior*100).toFixed(1)}% vs previous period`;
-  const link = (id: string): string => {
-    const q = new URLSearchParams({site:id,range:"custom",from:query.get("from") ?? "",to:query.get("to") ?? "",cmp:previous ? "prev":"off"});
-    if(query.has("f")) q.set("f",query.get("f") ?? "");
-    return `/dashboard#/overview?${q}`;
-  };
-  el("render-buffer").innerHTML = `<h2>${escape(data.organisation.name)}</h2><p><a class="btn" href="/insights?${escape(new URLSearchParams([...query,["org",data.organisation.id]]).toString())}">Explore insights</a></p><div class="actions">${["projects","series","goals","totals"].map(dataset=>`<a class="btn btn-sm" href="/api/organisations/${encodeURIComponent(data.organisation.id)}/export?${escape(new URLSearchParams([...query,["dataset",dataset]]).toString())}">Download ${dataset} CSV</a>`).join("")}</div><p data-part="goals" class="org-notes">Goal completions: ${fmt(data.main.conversions.completions)} · Daily-unique completion rate: ${(data.main.conversions.rate*100).toFixed(1)}% (${fmt(data.main.conversions.convertedVisitorDays)} / ${fmt(data.main.conversions.visitorDays)} project visitor-days). Repeats count in completions; the rate unions goals per project and local day within the UTC event window.</p><details data-part="goals"><summary>Goal completions by project</summary><div class="org-scroll"><table class="table"><thead><tr><th>Project</th><th>Goal</th><th>Completions</th><th>Converted visitor-days</th><th>Visitor-days</th><th>Rate</th></tr></thead><tbody>${data.main.goals.map(g=>`<tr><td>${escape(data.main.projects.find(p=>p.id===g.projectId)?.name??g.projectId)}</td><td>${escape(g.name)}</td><td>${fmt(g.completions)}</td><td>${fmt(g.convertedVisitorDays)}</td><td>${fmt(g.visitorDays)}</td><td>${(g.rate*100).toFixed(1)}%</td></tr>`).join("")}</tbody></table></div></details><div class="org-summary"><div>Pageviews<strong>${fmt(current)}</strong><span class="muted">${escape(delta)}</span></div><div>Project visitor-days<strong>${fmt(data.main.totals.visitorDays)}</strong><span class="muted">Sum across projects, not distinct people</span></div><div>Projects<strong>${data.main.projects.length}</strong></div></div>
-  <p data-part="measurement" class="org-notes">${fmt(m.visits)} visits · ${(m.bounceRate*100).toFixed(1)}% bounce · Visible visit duration: ${m.duration===null?"Unknown":`${m.duration}s`} (${fmt(m.measuredVisits)} measured visits). Visits start within the UTC range; duration divides total visible time by measured visits. A bounce has one pageview and no goal.</p>
-  <section class="panel"><div class="panel-head"><h2>Traffic over time</h2></div><div class="org-chart-wrap"><p class="org-legend"><span><span class="org-key"></span>Selected period · pageviews</span>${previous?'<span><span class="org-key previous"></span>Previous period · pageviews</span>':""}</p><svg class="org-chart" viewBox="0 0 ${width} 250" role="group" aria-label="Daily pageviews in UTC; focus a point for exact values. Table below."><text x="0" y="35">${fmt(max)}</text><text x="22" y="210">0</text><path d="M45 205H${width-20}" stroke="currentColor" opacity=".2"/>${previous?`<polyline class="org-prev" points="${line(previous.buckets)}"/>`:""}<polyline class="org-trend" points="${line(data.main.buckets)}"/>${data.main.buckets.map((b,i)=>{const text=`${b.day}: ${b.pageviews} pageviews${previous?`; previous ${previous.buckets[i]?.day ?? "—"}: ${previous.buckets[i]?.pageviews ?? "—"}`:""}`;return `<circle tabindex="0" cx="${x(i)}" cy="${y(b.pageviews)}" r="4" aria-label="${text}" data-detail="${text}"><title>${text}</title></circle>`;}).join("")}<text x="45" y="240">${escape(query.get("from") ?? "")}</text><text x="${width-20}" y="240" text-anchor="end">${escape(query.get("to") ?? "")}</text></svg><p class="org-chart-detail" id="chart-detail" role="status">Focus or point to a dot to inspect a day.</p></div><details class="panel-body"><summary>Daily traffic table</summary><div class="org-scroll" tabindex="0" role="region" aria-label="Traffic table, scroll for more columns"><table class="table"><caption>Exact daily pageviews, UTC</caption><thead><tr><th scope="col">Date</th><th scope="col">Pageviews</th><th scope="col">Previous date</th><th scope="col">Previous pageviews</th></tr></thead><tbody>${data.main.buckets.map((b,i)=>`<tr><th scope="row">${b.day}</th><td>${fmt(b.pageviews)}</td><td>${previous?.buckets[i]?.day ?? "—"}</td><td>${previous?.buckets[i]?fmt(previous.buckets[i].pageviews):"—"}</td></tr>`).join("")}</tbody></table></div></details></section>
-  <section class="panel org-management"><div class="panel-head"><h2>Project contribution</h2></div><div class="org-scroll" tabindex="0" role="region" aria-label="Traffic table, scroll for more columns"><table class="table"><caption>Ranked by pageviews for the selected period and filters</caption><thead><tr><th scope="col">Project</th><th scope="col">Pageviews</th><th scope="col">Share</th><th scope="col">Previous pageviews</th><th scope="col">Project visitor-days</th></tr></thead><tbody>${data.main.projects.map(p=>`<tr><th scope="row"><a href="${escape(link(p.id))}">${escape(p.name)}</a><br><span class="muted">${escape(p.domain)}</span></th><td>${fmt(p.pageviews)}</td><td>${current?(p.pageviews/current*100).toFixed(1):"0.0"}%<span class="org-bar" style="width:${current?p.pageviews/current*100:0}%" aria-hidden="true"></span></td><td>${previous?fmt(previous.projects.find(v=>v.id===p.id)?.pageviews ?? 0):"—"}</td><td>${fmt(p.visitorDays)}</td></tr>`).join("") || '<tr><td colspan="5">No projects yet. An administrator can create or move a project here.</td></tr>'}</tbody></table></div></section>
-  <p class="org-notes muted">${current?"":"No pageviews match this period and filter. "}Organisation dates and chart buckets use UTC event times. Project visitor-days sum each project's local-day visitor identities that appear in this UTC window. People may count across projects and days; this is not a deduplicated audience. Project drilldowns retain each project's own timezone, so date-edge totals may differ. Moving projects includes their full history in their current organisation. Page filters select matching visits within the period.</p>`;
-  el("render-buffer").querySelectorAll<SVGCircleElement>("circle[data-detail]").forEach(point => {
-    for(const event of ["focus","pointerenter"]) point.addEventListener(event,()=>{el("chart-detail").textContent=point.dataset.detail ?? "";});
+/* ---------- menus ---------- */
+const MENUS: [string, string][] = [["org-button", "org-menu"], ["account-button", "account-menu"], ["csv-button", "csv-menu"], ["filter-button", "filter-panel"]];
+function closeMenus(except?: string): void {
+  for (const [button, menu] of MENUS) if (button !== except) { el(menu).hidden = true; el(button).setAttribute("aria-expanded", "false"); }
+}
+function wireMenus(): void {
+  for (const [button, menu] of MENUS) el(button).addEventListener("click", () => {
+    const open = el(menu).hidden;
+    closeMenus(button);
+    el(menu).hidden = !open;
+    el(button).setAttribute("aria-expanded", String(open));
+    if (open) el(menu).querySelector<HTMLElement>("select,input,a,button")?.focus();
+  });
+  document.addEventListener("click", event => {
+    if (event.target instanceof Element && !event.target.closest(".pop")) closeMenus();
+  });
+  document.addEventListener("keydown", event => {
+    if (event.key !== "Escape") return;
+    const open = MENUS.find(([, menu]) => !el(menu).hidden);
+    if (open) { closeMenus(); el(open[0]).focus(); }
+  });
+  el("nav-toggle").addEventListener("click", () => {
+    const open = !el("nav").classList.contains("open");
+    el("nav").classList.toggle("open", open);
+    el("nav-toggle").setAttribute("aria-expanded", String(open));
   });
 }
-async function load(push=false): Promise<void> {
-  const current = ++generation;
 
-  el("report").innerHTML = "";
-  status("Loading traffic…");
-  const id = select("organisation").value;
-  const query = new URLSearchParams({ from:input("from").value,to:input("to").value });
-  if(input("value").value) query.set("f",`${select("dimension").value}:${input("value").value}`);
-  if(select("compare").value === "prev") {
-    const start = Date.parse(input("from").value+"T00:00:00Z");
-    const end = Date.parse(input("to").value+"T00:00:00Z");
-    if(Number.isFinite(start) && Number.isFinite(end)) { query.set("cmpFrom",day(start-(end-start)-DAY)); query.set("cmpTo",day(start-DAY)); }
+/* ---------- chrome ---------- */
+function options(): void {
+  const orgOptions = organisations.map(o => `<option value="${escape(o.id)}">${escape(o.name)}</option>`).join("");
+  for (const id of ["destination", "rename-target", "project-org"]) {
+    const previous = select(id).value;
+    select(id).innerHTML = orgOptions;
+    select(id).value = organisations.some(o => o.id === previous) ? previous : sel.org;
   }
-  const address = new URLSearchParams(query); address.set("org",id); address.set("compare",select("compare").value);
-  if(push) history.pushState(null,"",`/organisations?${address}`);
-  else history.replaceState(null,"",`/organisations?${address}`);
-  input("rename").value = organisations.find(o=>o.id===id)?.name ?? "";
+  const previousProject = select("project").value;
+  select("project").innerHTML = projects.map(p => `<option value="${escape(p.id)}">${escape(p.name)} — ${escape(orgName(p.organisationId))}</option>`).join("");
+  if (projects.some(p => p.id === previousProject)) select("project").value = previousProject;
+  input("rename").value = orgName(select("rename-target").value);
+  el("org-rows").innerHTML = organisations.map(o => `<tr><td><a href="${escape(pageAddress({ ...sel, org: o.id }))}">${escape(o.name)}</a></td><td class="r">${projects.filter(p => p.organisationId === o.id).length}</td></tr>`).join("");
+}
+function chrome(): void {
+  const valid = validOrg();
+  el("org-mark").textContent = valid ? initials(orgName(sel.org)) : "?";
+  el("org-label").textContent = valid ? orgName(sel.org) : "Choose organisation";
+  el("org-list").innerHTML = organisations.map(o => `<a href="${escape(pageAddress({ ...sel, org: o.id }))}" data-org="${escape(o.id)}" ${o.id === sel.org ? 'aria-current="true"' : ""}><span class="site-mark" aria-hidden="true">${escape(initials(o.name))}</span><span>${escape(o.name)}<br><span class="muted">${projects.filter(p => p.organisationId === o.id).length} projects</span></span>${o.id === sel.org ? '<span class="tick" aria-hidden="true">✓</span>' : ""}</a>`).join("");
+  el<HTMLAnchorElement>("nav-report").href = pageAddress(sel);
+  el<HTMLAnchorElement>("manage-back").href = pageAddress(sel);
+  el<HTMLAnchorElement>("nav-insights").href = valid ? insightsAddress(sel) : "/insights";
+  const first = projects.filter(p => p.organisationId === sel.org).sort((a, b) => a.name.localeCompare(b.name))[0];
+  el<HTMLAnchorElement>("nav-projects").href = first ? projectReportAddress(first.id, sel) : "/dashboard#/overview";
+  el<HTMLAnchorElement>("insights-link").href = insightsAddress(sel);
+  el("csv-menu").querySelectorAll<HTMLAnchorElement>("a[data-dataset]").forEach(a => { a.href = exportAddress(sel, a.dataset.dataset ?? ""); });
+}
+function controls(): void {
+  const preset = presetFor(sel, Date.now());
+  select("range").value = preset;
+  select("compare").value = sel.compare;
+  input("from").value = sel.from;
+  input("to").value = sel.to;
+  el("custom-range").hidden = preset !== "custom";
+  el("range-error").textContent = "";
+  if (sel.filter) { select("dimension").value = sel.filter.dim; input("value").value = sel.filter.value; }
+  const filter = sel.filter;
+  el("filters").hidden = !filter;
+  el("filters").innerHTML = filter ? `<span class="chip">${escape(DIMENSIONS.find(([id]) => id === filter.dim)?.[1] ?? filter.dim)} is <b>${escape(filter.value)}</b><button type="button" id="remove-filter" aria-label="Remove filter ${escape(DIMENSIONS.find(([id]) => id === filter.dim)?.[1] ?? filter.dim)} is ${escape(filter.value)}"><svg class="icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button></span>` : "";
+  document.getElementById("remove-filter")?.addEventListener("click", () => { sel = { ...sel, filter: null }; input("value").value = ""; void load(true); });
+}
+
+/* ---------- view routing ---------- */
+function route(): void {
+  sel = readSelection(location.search, Date.now(), organisations[0]?.id ?? "");
+  const view = admin && location.hash === "#manage" ? "manage" : "report";
+  const key = `${view}|${location.search}`;
+  if (key === routed) return;
+  routed = key;
+  el("report-view").hidden = view !== "report";
+  el("manage-view").hidden = view !== "manage";
+  if (view === "report") el("nav-report").setAttribute("aria-current", "page"); else el("nav-report").removeAttribute("aria-current");
+  if (view === "manage") el("nav-manage").setAttribute("aria-current", "page"); else el("nav-manage").removeAttribute("aria-current");
+  el("nav").classList.remove("open");
+  el("nav-toggle").setAttribute("aria-expanded", "false");
+  chrome();
+  controls();
+  if (view === "manage") {
+    loader.stop(); generation++;
+    document.title = "Manage organisations · PostDeploy Analytics";
+    options();
+    return;
+  }
+  if (!validOrg()) {
+    loader.stop(); generation++;
+    el("report").innerHTML = "";
+    el("toolbar").hidden = true;
+    el("heading").textContent = "Organisation not found";
+    el("subtitle").textContent = "";
+    status(organisations.length ? "This organisation does not exist. Choose an organisation to continue." : "No organisations exist yet.", true);
+    return;
+  }
+  void load();
+}
+function navigate(next: Selection): void {
+  sel = next;
+  void load(true);
+}
+
+/* ---------- report ---------- */
+const SECTION_TITLES: Record<Section, string> = { summary: "traffic totals", compare: "comparison totals", series: "daily traffic", seriesCompare: "comparison traffic", goals: "goal completions", measurement: "visit measurement" };
+function figure(id: string, label: string, help: string): string {
+  return `<div class="fig" id="fig-${id}"><span class="k">${label}</span><span class="v" id="v-${id}"><span class="org-pending">—</span></span><span class="d" id="d-${id}">${help}</span></div>`;
+}
+async function load(push = false): Promise<void> {
+  const current = ++generation;
+  const address = pageAddress(sel);
+  if (push) history.pushState(null, "", address); else history.replaceState(null, "", address);
+  routed = `report|${location.search}`;
+  closeMenus();
+  chrome();
+  controls();
+  results = {};
   loader.reset();
-  el('report').innerHTML=`<h2>${escape(organisations.find(o=>o.id===id)?.name??id)}</h2><p>${escape(query.get('from')??'')} – ${escape(query.get('to')??'')} · UTC event window · ${escape(query.get('f')??'All traffic')}</p>`+['summary','series','goals','measurement'].map(section=>`<section class="panel" aria-label="${section}"><h2>${section==='summary'?'Traffic summary':section==='series'?'Traffic over time':section==='goals'?'Goal completions':'Visit measurement'}</h2><div id="result-${section}" role="status">Waiting for exact ${section}…</div></section>`).join('')+'<div id="render-buffer" hidden></div>';
-  status('Sections load independently.');
-  for(const section of ['summary','series','goals','measurement']) {
-    const q=new URLSearchParams(query); q.set('section',section); q.delete('cmpFrom');q.delete('cmpTo');
-    const target=el<HTMLElement>('result-'+section);
-    let selectedPacket: OrganisationReport|null=null, comparisonPacket: OrganisationReport|null=null;
-    const draw=(value: unknown):void=>{
-      if(current!==generation)return;
-      const source=value as OrganisationReport;
-     const packet={...source,prev:comparisonPacket?.main??null};
-      const blank=():OrganisationReport['main']=>({totals:{pageviews:0,visitorDays:0},buckets:[],projects:[],goals:[],conversions:{completions:0,visitorDays:0,convertedVisitorDays:0,rate:0},measurement:{visits:0,bounces:0,measuredVisits:0,visibleMs:0,bounceRate:0,duration:null}});
-      const data={...packet,main:{...blank(),...packet.main},prev:packet.prev?{...blank(),...packet.prev}:null};
-      render(data,query);
-      const buffer=el<HTMLElement>('render-buffer');
-      if(section==='summary') {target.parentElement?.classList.remove('panel');buffer.querySelector('h2')?.remove();const contribution=buffer.querySelector('.org-management');if(contribution){const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent=`Project contribution · ${packet.main.projects.length} projects`;contribution.replaceWith(details);details.append(summary,contribution);}buffer.querySelector('.org-chart-wrap')?.closest('section')?.remove();buffer.querySelectorAll('[data-part]').forEach(n=>n.remove());target.replaceChildren(...buffer.childNodes);}
-      else if(section==='series') {target.previousElementSibling?.remove();target.parentElement?.classList.remove('panel');const chart=buffer.querySelector('.org-chart-wrap')?.closest('section');target.replaceChildren(...(chart?[chart]:[]));}
-      else target.replaceChildren(...buffer.querySelectorAll(`[data-part="${section}"]`));
-      buffer.replaceChildren();
-    };
-    loader.enqueue(`/api/organisations/${encodeURIComponent(id)}/report?`+q,target,value=>{selectedPacket=value as OrganisationReport;draw(value);});
-    if(section==='series'&&query.has('cmpFrom')) {
-      const comparisonState=document.createElement('p');comparisonState.setAttribute('role','status');comparisonState.textContent='Waiting for comparison…';target.after(comparisonState);
-      const cq=new URLSearchParams(q);cq.set('from',query.get('cmpFrom')??'');cq.set('to',query.get('cmpTo')??'');
-      loader.enqueue(`/api/organisations/${encodeURIComponent(id)}/report?`+cq,comparisonState,value=>{comparisonPacket=value as OrganisationReport;if(selectedPacket)draw(selectedPacket);comparisonState.textContent=`Comparison ${cq.get('from')} – ${cq.get('to')} included.`;});
+  const comparison = reportQuery(sel);
+  const compareOn = comparison.has("cmpFrom");
+  const name = orgName(sel.org);
+  document.title = `${name} · PostDeploy Analytics`;
+  el("heading").textContent = name;
+  el("subtitle").textContent = `${rangeLabel(sel.from, sel.to)} in UTC${compareOn ? `, compared with ${rangeLabel(comparison.get("cmpFrom") ?? "", comparison.get("cmpTo") ?? "")}` : ""}`;
+  el("toolbar").hidden = false;
+  status("");
+  const pending = "Not loaded yet";
+  el("report").innerHTML = `<section class="panel" aria-labelledby="h-figures">
+    <h2 id="h-figures" class="visually-hidden">Key figures and daily traffic</h2>
+    <div class="ledger org-ledger">
+      ${figure("pageviews", "Pageviews", `<span id="state-summary">Waiting for exact results…</span>`)}
+      ${figure("visitorDays", "Project visitor-days", compareOn ? `<span id="state-compare">Waiting for comparison…</span>` : "Summed across projects")}
+      ${figure("visits", "Visits", `<span id="state-measurement">Waiting for exact results…</span>`)}
+      ${figure("bounce", "Bounce rate", pending)}
+      ${figure("duration", "Visible visit duration", pending)}
+      ${figure("completions", "Goal completions", `<span id="state-goals">Waiting for exact results…</span>`)}
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-meta">
+        <div class="seg" role="group" aria-label="Chart metric">
+          <button type="button" data-metric="pageviews" aria-pressed="${chartMetric === "pageviews"}">Pageviews</button>
+          <button type="button" data-metric="visitorDays" aria-pressed="${chartMetric === "visitorDays"}">Visitor-days</button>
+        </div>
+        <span class="key"><span class="swatch"></span>${escape(rangeLabel(sel.from, sel.to))}</span>
+        ${compareOn ? `<span class="key"><span class="swatch cmp"></span><span id="state-seriesCompare">Waiting for comparison…</span></span>` : ""}
+        <span class="end"><button type="button" class="btn btn-ghost btn-sm" id="chart-toggle" aria-pressed="${chartAsTable}">${chartAsTable ? "Show chart" : "Show as table"}</button></span>
+      </div>
+      <div id="state-series" class="org-chart-state">Waiting for exact results…</div>
+      <div id="chart-host"></div>
+    </div>
+  </section>
+  <section class="panel org-block" aria-labelledby="h-projects">
+    <div class="panel-head"><h2 id="h-projects">Projects</h2><span class="muted org-head-note">Ranked by pageviews · open a project for its full report</span></div>
+    <div class="panel-body" id="projects-body"><p class="muted">Projects appear when traffic totals load.</p></div>
+  </section>
+  <section class="panel org-block" aria-labelledby="h-goals">
+    <div class="panel-head"><h2 id="h-goals">Goals</h2></div>
+    <div class="panel-body" id="goals-body"><p class="muted">Goals appear when goal completions load.</p></div>
+  </section>
+  <details class="org-about">
+    <summary>How organisation figures are counted</summary>
+    <ul>
+      <li>Organisation dates and chart days use UTC event times. Project reports keep each project’s own timezone, so totals near date edges can differ.</li>
+      <li>Project visitor-days add up each project’s daily visitors in this window. The same person can count in several projects and on several days, so this is not a count of distinct people.</li>
+      <li>Visits count when they start within the UTC range. A bounce is a visit with one pageview and no goal. Visible duration divides total visible time by measured visits; visits without activity measurement stay unknown.</li>
+      <li>Goal completions include repeats. The daily-unique rate divides converted visitor-days by visitor-days, uniting goals per project and local day.</li>
+      <li>A page filter selects matching visits within the period. Moving a project brings its full history into its current organisation.</li>
+    </ul>
+  </details>`;
+  el("report").querySelectorAll<HTMLButtonElement>("[data-metric]").forEach(b => b.addEventListener("click", () => {
+    chartMetric = b.dataset.metric === "visitorDays" ? "visitorDays" : "pageviews";
+    el("report").querySelectorAll("[data-metric]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    drawSeries();
+  }));
+  el("chart-toggle").addEventListener("click", () => {
+    chartAsTable = !chartAsTable;
+    el("chart-toggle").setAttribute("aria-pressed", String(chartAsTable));
+    el("chart-toggle").textContent = chartAsTable ? "Show chart" : "Show as table";
+    drawSeries();
+  });
+
+  const base = reportQuery(sel); base.delete("cmpFrom"); base.delete("cmpTo");
+  const previous = new URLSearchParams(base);
+  previous.set("from", comparison.get("cmpFrom") ?? ""); previous.set("to", comparison.get("cmpTo") ?? "");
+  const enqueue = (section: Section, server: 'summary' | 'series' | 'goals' | 'measurement', query: URLSearchParams): void => {
+    const q = new URLSearchParams(query); q.set("section", server);
+    const target = el<HTMLElement>(`state-${section}`);
+    loader.enqueue(`/api/organisations/${encodeURIComponent(sel.org)}/report?${q}`, target, value => {
+      if (current !== generation) return;
+      results[section] = (value as OrganisationReport).main;
+      paint(section);
+    });
+  };
+  enqueue("summary", "summary", base);
+  enqueue("series", "series", base);
+  if (compareOn) enqueue("seriesCompare", "series", previous);
+  enqueue("goals", "goals", base);
+  enqueue("measurement", "measurement", base);
+  if (compareOn) enqueue("compare", "summary", previous);
+}
+
+function setFigure(id: string, value: string, detail?: string, tone = ""): void {
+  el(`v-${id}`).textContent = value;
+  if (detail !== undefined) el(`d-${id}`).innerHTML = tone ? `<span class="${tone}">${escape(detail)}</span>` : escape(detail);
+}
+function paint(section: Section): void {
+  const { summary, compare, goals, measurement } = results;
+  const compareOn = reportQuery(sel).has("cmpFrom");
+  if (section === "summary" || section === "compare") {
+    if (summary) {
+      const d = compare ? change(summary.totals.pageviews, compare.totals.pageviews) : null;
+      setFigure("pageviews", fmt(summary.totals.pageviews), d ? `${d.text} vs previous` : compareOn ? "Comparison pending" : "All projects", d?.tone);
+      if (!compareOn) setFigure("visitorDays", fmt(summary.totals.visitorDays), "Summed across projects");
+      else el("v-visitorDays").textContent = fmt(summary.totals.visitorDays);
+      renderProjects(summary, compare);
+    }
+    if (compare) {
+      const d = summary ? change(summary.totals.visitorDays, compare.totals.visitorDays) : null;
+      el("d-visitorDays").innerHTML = d ? `<span class="${d.tone}">${escape(d.text)} vs previous</span>` : escape(`Previous period: ${fmt(compare.totals.visitorDays)}`);
     }
   }
-  if(query.has('cmpFrom')) {
-    const comparison=document.createElement('section');comparison.className='panel';comparison.setAttribute('aria-label','Comparison traffic summary');
-    const title=document.createElement('h2');title.textContent='Comparison traffic summary';comparison.append(title);
-    const result=document.createElement('p');result.textContent='Waiting for comparison…';comparison.append(result);document.getElementById('result-summary')?.after(comparison);
-    const q=new URLSearchParams(query);q.set('from',q.get('cmpFrom')??'');q.set('to',q.get('cmpTo')??'');q.delete('cmpFrom');q.delete('cmpTo');q.set('section','summary');
-    loader.enqueue(`/api/organisations/${encodeURIComponent(id)}/report?`+q,result,value=>{const d=value as {main:{totals:{pageviews:number;visitorDays:number}}};result.textContent=`${q.get('from')} – ${q.get('to')}: ${fmt(d.main.totals.pageviews)} pageviews · ${fmt(d.main.totals.visitorDays)} visitor-days`;});
+  if (section === "measurement" && measurement) {
+    const m = measurement.measurement;
+    setFigure("visits", fmt(m.visits), "Started in this range");
+    setFigure("bounce", pct(m.bounceRate), "One pageview, no goal");
+    setFigure("duration", m.duration === null ? "Unknown" : duration(m.duration), `Average of ${fmt(m.measuredVisits)} measured visits`);
   }
-
-
+  if (section === "goals" && goals) {
+    renderGoals(goals);
+    setFigure("completions", fmt(goals.conversions.completions), `${pct(goals.conversions.rate)} daily-unique rate`);
+  }
+  if (section === "series" || section === "seriesCompare") {
+    if (section === "seriesCompare") el("state-seriesCompare").textContent = rangeLabel(results.seriesCompare?.buckets[0]?.day ?? "", results.seriesCompare?.buckets.at(-1)?.day ?? "");
+    drawSeries();
+  }
 }
-async function mutate(form: HTMLFormElement, action: () => Promise<void>): Promise<void> {
-  const button=form.querySelector("button"); if(button) button.disabled=true;
-  try { await action(); await load(); } catch(e) { status(e instanceof Error?e.message:String(e),true); } finally { if(button) button.disabled=false; }
+
+function renderProjects(summary: OrganisationPeriod, compare: OrganisationPeriod | undefined): void {
+  const total = summary.totals.pageviews;
+  const max = Math.max(1, ...summary.projects.map(p => p.pageviews));
+  const body = el("projects-body");
+  if (!summary.projects.length) {
+    body.innerHTML = `<div class="empty"><h3>No projects in this organisation yet</h3>${admin ? '<a class="btn" href="#manage">Add or move a project</a>' : "<p>An administrator can add or move a project here.</p>"}</div>`;
+    return;
+  }
+  body.innerHTML = `<div class="org-scroll" tabindex="0" role="region" aria-labelledby="h-projects"><table class="list org-projects">
+    <colgroup><col><col class="c-num"><col class="c-small"><col class="c-num">${compare ? '<col class="c-num">' : ""}</colgroup>
+    <thead><tr><th scope="col">Project</th><th scope="col" class="r">Pageviews</th><th scope="col" class="r">Share</th><th scope="col" class="r">Visitor-days</th>${compare ? '<th scope="col" class="r">Previous</th>' : ""}</tr></thead>
+    <tbody>${summary.projects.map(p => `<tr><th scope="row" class="cell-name"><a class="rowbtn org-rowlink" href="${escape(projectReportAddress(p.id, sel))}"><span class="fill" style="width:${(p.pageviews / max * 100).toFixed(1)}%"></span><span class="label">${escape(p.name)}</span><span class="note">${escape(p.domain)}</span></a></th><td class="r">${fmt(p.pageviews)}</td><td class="r">${total ? pct(p.pageviews / total) : "0.0%"}</td><td class="r">${fmt(p.visitorDays)}</td>${compare ? `<td class="r">${fmt(compare.projects.find(v => v.id === p.id)?.pageviews ?? 0)}</td>` : ""}</tr>`).join("")}</tbody>
+  </table></div>
+  <p class="help org-foot">${summary.projects.length} ${summary.projects.length === 1 ? "project" : "projects"}${total ? "" : " · No pageviews match this period and filter"}${compare ? " · Previous shows pageviews in the comparison period" : ""}</p>`;
 }
-function restoreSelection(): void {
-  const q = new URLSearchParams(location.search);
-  const id=q.get("org") ?? organisations[0]?.id ?? "";
-  if(!organisations.some(o=>o.id===id)) { status("This organisation does not exist. Choose an organisation to continue.",true); select("organisation").selectedIndex=-1; } else select("organisation").value=id;
-  input("from").value=q.get("from") ?? day(Date.now()-29*DAY); input("to").value=q.get("to") ?? day(Date.now());
-  select("compare").value=q.get("compare")==="off"?"off":"prev";
-  input("value").value="";
-  const f=q.get("f") ?? ""; if(f.includes(":")) { select("dimension").value=f.slice(0,f.indexOf(":")); input("value").value=f.slice(f.indexOf(":")+1); }
+
+function renderGoals(goals: OrganisationPeriod): void {
+  const c = goals.conversions;
+  const name = (id: string): string => projects.find(p => p.id === id)?.name ?? id;
+  el("goals-body").innerHTML = goals.goals.length ? `<div class="org-scroll" tabindex="0" role="region" aria-labelledby="h-goals"><table class="table">
+    <thead><tr><th scope="col">Goal</th><th scope="col">Project</th><th scope="col" class="r">Completions</th><th scope="col" class="r">Converted visitor-days</th><th scope="col" class="r">Visitor-days</th><th scope="col" class="r">Daily-unique rate</th></tr></thead>
+    <tbody>${goals.goals.map(g => `<tr><td>${escape(g.name)}</td><td>${escape(name(g.projectId))}</td><td class="r">${fmt(g.completions)}</td><td class="r">${fmt(g.convertedVisitorDays)}</td><td class="r">${fmt(g.visitorDays)}</td><td class="r">${pct(g.rate)}</td></tr>`).join("")}</tbody>
+  </table></div>
+  <p class="help org-foot">All goals: ${fmt(c.completions)} completions · ${pct(c.rate)} daily-unique rate (${fmt(c.convertedVisitorDays)} of ${fmt(c.visitorDays)} project visitor-days). Completions include repeats.</p>` : `<p class="muted">No goals are configured for these projects. Goals are set up in each project’s Manage page.</p>`;
+}
+
+function drawSeries(): void {
+  const host = document.getElementById("chart-host");
+  const main = results.series;
+  if (!host || !main) return;
+  el("state-series").hidden = true;
+  const prev = results.seriesCompare ?? null;
+  const metric = chartMetric;
+  const label = metric === "pageviews" ? "Pageviews" : "Project visitor-days";
+  const buckets = main.buckets;
+  const cur = buckets.map(b => b[metric]);
+  const old = prev ? buckets.map((_, i) => prev.buckets[i]?.[metric] ?? null) : null;
+  if (chartAsTable) {
+    host.innerHTML = `<div class="chart-table" tabindex="0" role="region" aria-label="Daily ${label.toLowerCase()} table"><table class="table"><caption class="visually-hidden">Exact daily ${label.toLowerCase()}, UTC</caption><thead><tr><th scope="col">Day (UTC)</th><th scope="col" class="r">${label}</th>${prev ? '<th scope="col">Previous day</th><th scope="col" class="r">Previous</th>' : ""}</tr></thead><tbody>${buckets.map((b, i) => `<tr><td>${b.day}</td><td class="r">${fmt(b[metric])}</td>${prev ? `<td>${prev.buckets[i]?.day ?? "—"}</td><td class="r">${old?.[i] == null ? "—" : fmt(old[i] ?? 0)}</td>` : ""}</tr>`).join("")}</tbody></table></div>`;
+    return;
+  }
+  host.innerHTML = `<div class="chart" id="chart" tabindex="0" role="img"></div>`;
+  const chart = el("chart");
+  const W = Math.max(280, chart.clientWidth);
+  const H = chart.clientHeight || 280;
+  const pad = { l: 52, r: 8, t: 10, b: 26 };
+  const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
+  const n = cur.length;
+  const max = niceMax(Math.max(0, ...cur, ...(old ?? []).map(v => v ?? 0)) * 1.08);
+  const bars = n <= 14;
+  const x = (i: number): number => pad.l + (bars ? (i + 0.5) * (iw / n) : n === 1 ? iw / 2 : i / (n - 1) * iw);
+  const y = (v: number): number => pad.t + ih - v / max * ih;
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map(f => f * max);
+  const every = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(iw / 80))));
+  const path = (values: (number | null)[]): string => values.map((v, i) => v === null ? "" : `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+  let marks = "";
+  if (bars) {
+    const bw = Math.min(24, iw / Math.max(1, n) * (old ? 0.36 : 0.6));
+    if (old) marks += old.map((v, i) => v === null ? "" : `<rect class="bar cmp" x="${x(i) - bw - 1}" y="${y(v)}" width="${bw}" height="${Math.max(0, pad.t + ih - y(v))}" rx="2"/>`).join("");
+    marks += cur.map((v, i) => `<rect class="bar" x="${old ? x(i) + 1 : x(i) - bw / 2}" y="${y(v)}" width="${bw}" height="${Math.max(0, pad.t + ih - y(v))}" rx="2"/>`).join("");
+  } else {
+    if (old) marks += `<path class="line cmp" d="${path(old)}"/>`;
+    if (n) marks += `<path class="area" d="${path(cur)}L${x(n - 1)},${pad.t + ih}L${x(0)},${pad.t + ih}Z"/><path class="line" d="${path(cur)}"/>`;
+  }
+  chart.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true"><defs><linearGradient id="area-fade" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--color-accent)" stop-opacity="0.16"/><stop offset="1" stop-color="var(--color-accent)" stop-opacity="0"/></linearGradient></defs><g class="grid">${ticks.map(t => `<line x1="${pad.l}" x2="${W - pad.r}" y1="${y(t)}" y2="${y(t)}"/>`).join("")}</g><g class="axis">${ticks.map(t => `<text x="${pad.l - 10}" y="${y(t) + 4}" text-anchor="end">${axis(t)}</text>`).join("")}${buckets.map((b, i) => i % every === 0 ? `<text x="${x(i)}" y="${H - 6}" text-anchor="middle">${shortDay(b.day)}</text>` : "").join("")}</g>${marks}<g class="hover"></g></svg><div class="tip" hidden></div>`;
+  const total = cur.reduce((a, b) => a + b, 0);
+  chart.setAttribute("aria-label", `Daily ${label.toLowerCase()} in UTC, ${fmt(total)} in total${metric === "visitorDays" ? " (a sum of daily figures, not distinct people)" : ""}. Use the left and right arrow keys to read each day, or show the chart as a table.`);
+  const tip = chart.querySelector<HTMLElement>(".tip");
+  const hover = chart.querySelector<SVGGElement>(".hover");
+  if (!tip || !hover) return;
+  const show = (i: number): void => {
+    const v = cur[i];
+    const b = buckets[i];
+    if (v === undefined || !b) { hover.innerHTML = ""; tip.hidden = true; return; }
+    chart.dataset.i = String(i);
+    const o = old?.[i] ?? null;
+    hover.innerHTML = `<line class="cursor" x1="${x(i)}" x2="${x(i)}" y1="${pad.t}" y2="${pad.t + ih}"/>${bars ? "" : `${o !== null ? `<circle class="dot cmp" cx="${x(i)}" cy="${y(o)}" r="4"/>` : ""}<circle class="dot" cx="${x(i)}" cy="${y(v)}" r="4.5"/>`}`;
+    const d = o !== null ? change(v, o) : null;
+    tip.innerHTML = `<div class="dim">${shortDay(b.day, true)} (UTC)</div><div class="row"><span>${label}</span><b>${fmt(v)}</b></div>${prev && o !== null ? `<div class="row dim"><span>${shortDay(prev.buckets[i]?.day ?? "", true)}</span><span>${fmt(o)}</span></div><div class="row dim"><span>Change</span><span>${d?.text ?? ""}</span></div>` : ""}`;
+    tip.hidden = false;
+    const right = x(i) + 12 + tip.offsetWidth > W;
+    tip.style.transform = `translate(${right ? x(i) - tip.offsetWidth - 12 : x(i) + 12}px, ${pad.t}px)`;
+  };
+  chart.onpointermove = (e: PointerEvent): void => {
+    const px = e.clientX - chart.getBoundingClientRect().left - pad.l;
+    const i = bars ? Math.floor(px / (iw / n)) : Math.round(px / iw * (n - 1));
+    show(Math.max(0, Math.min(n - 1, i)));
+  };
+  chart.onpointerleave = (): void => { if (document.activeElement !== chart) show(-1); };
+  chart.onblur = (): void => show(-1);
+  chart.onkeydown = (e: KeyboardEvent): void => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+    e.preventDefault();
+    const at = chart.dataset.i ? Number(chart.dataset.i) : n - 1;
+    const i = e.key === "Home" ? 0 : e.key === "End" ? n - 1 : Math.max(0, Math.min(n - 1, at + (e.key === "ArrowRight" ? 1 : -1)));
+    show(i);
+    el("announce").textContent = [...tip.children].map(c => c.children.length ? [...c.children].map(x => x.textContent ?? "").join(" ") : c.textContent ?? "").join(", ");
+  };
+}
+
+/* ---------- management ---------- */
+async function refreshLists(): Promise<void> {
+  [organisations, projects] = await Promise.all([api<Organisation[]>("/api/organisations"), api<Project[]>("/api/sites/catalog")]);
+  options();
+  chrome();
+}
+async function mutate(form: HTMLFormElement, action: () => Promise<string>): Promise<void> {
+  const button = form.querySelector("button");
+  if (button) button.disabled = true;
+  status("Saving…", false, "manage-status");
+  try { const message = await action(); await refreshLists(); status(message, false, "manage-status"); }
+  catch (e) { status(e instanceof Error ? e.message : String(e), true, "manage-status"); }
+  finally { if (button) button.disabled = false; }
+}
+function wireManagement(): void {
+  select("rename-target").addEventListener("change", () => { input("rename").value = orgName(select("rename-target").value); });
+  const forms: Record<string, (values: FormData, form: HTMLFormElement) => Promise<string>> = {
+    "new-org": async (values, form) => {
+      const org = await api<Organisation>("/api/organisations", "POST", { name: values.get("name") });
+      sel = { ...sel, org: org.id };
+      history.replaceState(null, "", pageAddress(sel) + "#manage");
+      routed = `manage|${location.search}`;
+      form.reset();
+      return `Created ${org.name}.`;
+    },
+    "rename-org": async values => {
+      const id = String(values.get("organisation") ?? "");
+      await api(`/api/organisations/${encodeURIComponent(id)}`, "PATCH", { name: values.get("name") });
+      return "Organisation renamed.";
+    },
+    "new-project": async (values, form) => {
+      await api("/api/sites", "POST", { name: values.get("name"), domain: values.get("domain"), kind: values.get("kind"), organisationId: values.get("organisation") });
+      form.reset();
+      return "Project created.";
+    },
+    "move-project": async values => {
+      await api(`/api/sites/${encodeURIComponent(String(values.get("project") ?? ""))}`, "PATCH", { organisationId: values.get("destination") });
+      return "Project moved with its full history.";
+    },
+  };
+  for (const [name, action] of Object.entries(forms)) el<HTMLFormElement>(name).addEventListener("submit", event => {
+    event.preventDefault();
+    const form = el<HTMLFormElement>(name);
+    const values = new FormData(form);
+    void mutate(form, () => action(values, form));
+  });
+}
+
+/* ---------- start ---------- */
+function wireReport(): void {
+  select("dimension").innerHTML = DIMENSIONS.map(([id, label]) => `<option value="${id}">${label}</option>`).join("");
+  el("org-list").addEventListener("click", event => {
+    const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[data-org]") : null;
+    if (!link || event.metaKey || event.ctrlKey || event.shiftKey) return;
+    event.preventDefault();
+    closeMenus();
+    history.pushState(null, "", link.href);
+    routed = "";
+    route();
+  });
+  el("nav-report").addEventListener("click", event => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+    event.preventDefault();
+    history.pushState(null, "", pageAddress(sel));
+    route();
+  });
+  el("manage-back").addEventListener("click", event => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+    event.preventDefault();
+    history.pushState(null, "", pageAddress(sel));
+    route();
+  });
+  select("range").addEventListener("change", () => {
+    const preset = select("range").value as Preset;
+    if (preset === "custom") { el("custom-range").hidden = false; input("from").focus(); return; }
+    navigate({ ...sel, ...presetRange(preset, Date.now()) });
+  });
+  select("compare").addEventListener("change", () => navigate({ ...sel, compare: select("compare").value === "off" ? "off" : "prev" }));
+  el("custom-range").addEventListener("submit", event => {
+    event.preventDefault();
+    const from = input("from").value, to = input("to").value;
+    if (!from || !to) { el("range-error").textContent = "Choose both dates."; return; }
+    if (from > to) { el("range-error").textContent = "The start date must be on or before the end date."; return; }
+    navigate({ ...sel, from, to });
+  });
+  el("filter-panel").addEventListener("submit", event => {
+    event.preventDefault();
+    const dim = DIMENSIONS.find(([id]) => id === select("dimension").value)?.[0];
+    const value = input("value").value;
+    if (!dim || !value) return;
+    navigate({ ...sel, filter: { dim, value } });
+  });
+  let width = 0;
+  new ResizeObserver(entries => {
+    const next = Math.round(entries[0]?.contentRect.width ?? 0);
+    if (next !== width) { width = next; drawSeries(); }
+  }).observe(el("main"));
+  el("logout").addEventListener("click", () => void window.PostDeployAuth.logout());
 }
 async function start(): Promise<void> {
   const auth = await window.PostDeployAuth.refresh();
-  if(!auth.user) { location.replace("/auth"); return; }
-  [organisations,projects] = await Promise.all([api<Organisation[]>("/api/organisations"),api<Project[]>("/api/sites/catalog")]);
+  if (!auth.user) { location.replace("/auth"); return; }
+  admin = auth.user.role === "admin";
+  el("account-email").textContent = auth.user.email;
+  el("nav-manage").hidden = !admin;
+  wireMenus();
+  wireReport();
+  if (admin) wireManagement();
+  [organisations, projects] = await Promise.all([api<Organisation[]>("/api/organisations"), api<Project[]>("/api/sites/catalog")]);
+  el("org-button").removeAttribute("disabled");
+  window.addEventListener("popstate", () => route());
+  window.addEventListener("hashchange", () => route());
   options();
-  restoreSelection();
-  window.addEventListener("popstate",()=>{restoreSelection();void load();});
-  el("workspace").hidden=false;
-  el("management").hidden=auth.user.role!=="admin";
-  el("controls").addEventListener("submit",e=>{e.preventDefault();void load(true);});
-  select("organisation").addEventListener("change",()=>void load(true));
-  el("logout").addEventListener("click",()=>void window.PostDeployAuth.logout());
-  for(const name of ["new-org","rename-org","new-project","move-project"]) el<HTMLFormElement>(name).addEventListener("submit",event=>{
-    event.preventDefault();const form=el<HTMLFormElement>(name); const values=new FormData(form);
-    void mutate(form,async()=>{
-      let selected=select("organisation").value;
-      if(name==="new-org") { const org=await api<Organisation>("/api/organisations","POST",{name:values.get("name")}); selected=org.id; }
-      if(name==="rename-org") await api(`/api/organisations/${selected}`,"PATCH",{name:values.get("name")});
-      if(name==="new-project") await api("/api/sites","POST",{name:values.get("name"),domain:values.get("domain"),kind:values.get("kind"),organisationId:selected});
-      if(name==="move-project") await api(`/api/sites/${values.get("project")}`,"PATCH",{organisationId:values.get("destination")});
-      [organisations,projects]=await Promise.all([api<Organisation[]>("/api/organisations"),api<Project[]>("/api/sites/catalog")]);options();select("organisation").value=selected;
-    });
-  });
-  if(select("organisation").value) await load();
+  route();
 }
-void start().catch(e=>status(e instanceof Error?e.message:String(e),true));
+void start().catch(e => status(e instanceof Error ? e.message : String(e), true));

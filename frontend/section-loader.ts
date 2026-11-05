@@ -6,6 +6,7 @@ export class SectionLoader {
   stop(): void { this.controller.abort(); this.pending = []; }
   enqueue(path: string, target: HTMLElement, render: (value: unknown)=>void): void {
     const signal = this.controller.signal;
+    const anchor = target.parentElement;
     const run = async (): Promise<void> => {
       if(signal.aborted) return;
       target.setAttribute('aria-busy','true');
@@ -24,6 +25,7 @@ export class SectionLoader {
         } finally { clearTimeout(timer); }
       } catch(error) {
         if(signal.aborted) return;
+        if (!target.isConnected && anchor?.isConnected) anchor.replaceChildren(target);
         target.textContent = error instanceof Error ? error.message : 'This section could not load.';
         const button=document.createElement('button'); button.type='button'; button.className='btn'; button.textContent='Retry section';
         button.addEventListener('click',()=>{button.disabled=true;this.pending.unshift(run);void this.drain();},{once:true}); target.append(' ',button);

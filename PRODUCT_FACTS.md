@@ -45,7 +45,7 @@ Each fact was verified by running the app locally in a browser, by `curl`, or by
 - An installation contains organisations, each grouping multiple projects. A project retains its existing website and tracking identifier.
 - Administrators create and rename organisations, create projects within them and move projects with their full history. Viewers read all organisations and projects.
 - Organisation visit summaries use visit starts within the UTC range and sum bounce/duration numerators and denominators; existing traffic counts remain event-based.
-- The organisation home shows UTC daily pageviews with previous-period comparison, ranked project contribution, exact-value tooltips and accessible tables. Date and exact dimension filters apply to the combined report.
+- The organisation home shares the dashboard workspace chrome, six-figure ledger and correctly sized chart, with UTC daily pageviews, previous-period comparison, ranked project contribution, keyboard tooltips and exact tables. Administrator management has its own view. Date and exact dimension filters apply to the combined report.
 - Project visitor-days sum per-project local-day visitor identities observed within the selected UTC event window. These figures do not deduplicate people across projects or days. Project reports retain their configured timezone, so date-edge totals can differ.
 - Existing installations migrate websites to a default organisation without changing their event history, settings, users or tracker IDs. Existing project report URLs and collection endpoints remain supported.
 
@@ -186,4 +186,4 @@ that sustained/deployed capacity is certified.
 
 ## Public site and private workspace
 
-The public homepage explains the product, with explicitly labelled sample report figures and a separate sample-data demo at `/demo?demo=1`. `/auth` signs in to the invitation-only installation; `/organisations`, `/dashboard` and `/insights` require an authenticated session, and report APIs remain protected. Successful login opens the organisation workspace. Public source is prepared for GitHub using an explicit product-file allowlist, without private configuration or local instruction history. The installation can measure its public homepage and source-download clicks with its own tracker.
+The public homepage explains the product, with explicitly labelled sample report figures and a separate sample-data demo at `/demo?demo=1`. `/auth` signs in to the invitation-only installation; `/organisations`, `/dashboard` and `/insights` require an authenticated session, and report APIs remain protected. Successful login opens the organisation workspace. Public source is available on GitHub using an explicit product-file allowlist, without private configuration or local instruction history. The installation can measure its public homepage and source-download clicks with its own tracker.

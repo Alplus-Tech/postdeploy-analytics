@@ -6,37 +6,106 @@
 <title>Organisations · PostDeploy Analytics</title>
 <link rel="icon" href="icon.svg">
 <link rel="stylesheet" href="css/app.css">
-<link rel="stylesheet" href="css/organisations.css">
+<link rel="stylesheet" href="css/organisation-workspace.css">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
 <header class="topbar">
 <div class="container">
-<a class="wordmark" href="/organisations">
-<img src="icon.svg" width="28" height="28" alt="">
-<span>postdeploy.</span>
+<a class="wordmark" href="/organisations" aria-label="PostDeploy Analytics, organisations">
+<img src="icon.svg" width="24" height="24" alt="">
+<span class="logo-word hide-sm">postdeploy<span class="logo-period">.</span></span>
 </a>
-<nav aria-label="Installation">
-<a href="/dashboard#/overview">Project reports</a>
+<div class="pop">
+<button type="button" class="btn site-btn" id="org-button" aria-expanded="false" aria-controls="org-menu" aria-label="Choose organisation" disabled>
+<span class="site-mark" id="org-mark" aria-hidden="true"></span>
+<span class="domain" id="org-label">Organisation</span>
+<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
+<div class="menu" id="org-menu" hidden>
+<p class="menu-note">Organisations</p>
+<div id="org-list"></div>
+</div>
+</div>
+<nav class="nav" id="nav" aria-label="Main">
+<a id="nav-report" href="/organisations" aria-current="page">Organisation</a>
+<a id="nav-insights" href="/insights">Insights</a>
+<a id="nav-projects" href="/dashboard#/overview">Project reports</a>
+<a id="nav-manage" href="#manage" hidden>Manage</a>
 </nav>
-<button class="btn btn-ghost" id="logout">Sign out</button>
+<div class="topbar-end">
+<button type="button" class="btn btn-ghost menu-toggle" id="nav-toggle" aria-expanded="false" aria-controls="nav" aria-label="Menu">
+<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+</button>
+<div class="pop">
+<button type="button" class="btn btn-ghost" id="account-button" aria-expanded="false" aria-controls="account-menu" aria-label="Account menu">
+<span class="avatar"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="8" cy="5.5" r="2.75" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2.75 13.5c.9-2.4 2.9-3.75 5.25-3.75s4.35 1.35 5.25 3.75" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+</button>
+<div class="menu end" id="account-menu" hidden>
+<p class="menu-note" id="account-email"></p>
+<a href="/auth#auth=password">Change password</a>
+<hr>
+<button type="button" id="logout">Sign out</button>
+</div>
+</div>
+</div>
 </div>
 </header>
-<main id="main" class="container" tabindex="-1">
+<main id="main" class="container org-main" tabindex="-1">
+<div id="report-view">
 <div class="page-head">
-<div>
-<h1>Organisations</h1>
-<p class="muted">Combined traffic, with every project a click away.</p>
+<div class="title">
+<h1 id="heading">Organisation</h1>
+<span class="sub" id="subtitle">Loading organisations…</span>
+</div>
+<div class="toolbar" id="toolbar" hidden>
+<a class="btn" id="insights-link" href="/insights">Explore insights</a>
+<div class="pop">
+<button type="button" class="btn" id="csv-button" aria-expanded="false" aria-controls="csv-menu">Download CSV
+<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
+<div class="menu end" id="csv-menu" hidden>
+<p class="menu-note">Exact tables for this selection</p>
+<a data-dataset="projects" href="#">Projects</a>
+<a data-dataset="series" href="#">Daily series</a>
+<a data-dataset="goals" href="#">Goals</a>
+<a data-dataset="totals" href="#">Totals</a>
 </div>
 </div>
-<p id="status" role="status">Loading organisations…</p>
-<div id="workspace" hidden>
-<form id="controls" class="org-controls">
-<div class="field">
-<label for="organisation">Organisation</label>
-<select class="input" id="organisation" name="organisation">
+<label class="visually-hidden" for="range">Date range</label>
+<select class="select" id="range">
+<option value="7d">Last 7 days</option>
+<option value="30d">Last 30 days</option>
+<option value="90d">Last 90 days</option>
+<option value="365d">Last 365 days</option>
+<option value="custom">Custom range</option>
 </select>
+<label class="visually-hidden" for="compare">Compare with</label>
+<select class="select" id="compare">
+<option value="prev">Compare: previous period</option>
+<option value="off">No comparison</option>
+</select>
+<div class="pop">
+<button type="button" class="btn" id="filter-button" aria-expanded="false" aria-controls="filter-panel">
+<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+Filter
+</button>
+<form class="menu end org-filter" id="filter-panel" hidden>
+<div class="field">
+<label for="dimension">Filter every figure by</label>
+<select class="select" id="dimension" name="dimension"></select>
 </div>
+<div class="field">
+<label for="value">Exact value</label>
+<input class="input" id="value" name="value" maxlength="300" required aria-describedby="value-help">
+<span class="help" id="value-help">Matches stored values exactly, such as Direct or /pricing.</span>
+</div>
+<button class="btn btn-primary" type="submit">Apply filter</button>
+</form>
+</div>
+</div>
+</div>
+<form id="custom-range" class="custom-range panel org-range" hidden novalidate>
 <div class="field">
 <label for="from">From (UTC)</label>
 <input class="input" id="from" name="from" type="date" required>
@@ -45,39 +114,36 @@
 <label for="to">To (UTC)</label>
 <input class="input" id="to" name="to" type="date" required>
 </div>
-<div class="field">
-<label for="dimension">Filter by</label>
-<select class="input" id="dimension" name="dimension">
-<option value="source">Source</option>
-<option value="page">Page visited</option>
-<option value="country">Country</option>
-<option value="device">Device</option>
-<option value="browser">Browser</option>
-<option value="campaign">Campaign</option>
-<option value="referrer">Referrer</option>
-<option value="entry">Entry page</option>
-</select>
-</div>
-<div class="field">
-<label for="value">Exact value (optional)</label>
-<input class="input" id="value" name="value" maxlength="300">
-</div>
-<div class="field">
-<label for="compare">Compare</label>
-<select class="input" id="compare" name="compare">
-<option value="prev">Previous period</option>
-<option value="off">Off</option>
-</select>
-</div>
-<button class="btn btn-primary" type="submit">Apply</button>
+<button class="btn" type="submit">Apply range</button>
+<p class="help error" id="range-error" role="alert"></p>
 </form>
-<div id="report" aria-live="polite">
+<div class="filters" id="filters" aria-label="Active filter" hidden></div>
+<p id="status" role="status"></p>
+<div id="report"></div>
 </div>
-<section class="panel org-management" id="management" hidden>
+<div id="manage-view" hidden>
+<div class="page-head">
+<div class="title">
+<h1>Manage organisations</h1>
+<span class="sub">Organisations group projects for reporting. Every installation user can read every project.</span>
+</div>
+<div class="toolbar">
+<a class="btn" id="manage-back" href="/organisations">Back to report</a>
+</div>
+</div>
+<p id="manage-status" role="status"></p>
+<div class="grid-2 org-manage">
+<section class="panel" aria-labelledby="h-orgs">
 <div class="panel-head">
-<h2>Manage organisations and projects</h2>
+<h2 id="h-orgs">Organisations</h2>
 </div>
 <div class="panel-body stack">
+<div class="org-scroll" tabindex="0" role="region" aria-labelledby="h-orgs">
+<table class="table">
+<thead><tr><th scope="col">Name</th><th scope="col" class="r">Projects</th></tr></thead>
+<tbody id="org-rows"></tbody>
+</table>
+</div>
 <form id="new-org" class="org-form">
 <div class="field">
 <label for="org-name">New organisation name</label>
@@ -87,11 +153,22 @@
 </form>
 <form id="rename-org" class="org-form">
 <div class="field">
-<label for="rename">Selected organisation name</label>
+<label for="rename-target">Organisation to rename</label>
+<select class="select" id="rename-target" name="organisation"></select>
+</div>
+<div class="field">
+<label for="rename">New name</label>
 <input class="input" id="rename" name="name" maxlength="80" required>
 </div>
 <button class="btn" type="submit">Rename organisation</button>
 </form>
+</div>
+</section>
+<section class="panel" aria-labelledby="h-manage-projects">
+<div class="panel-head">
+<h2 id="h-manage-projects">Projects</h2>
+</div>
+<div class="panel-body stack">
 <form id="new-project" class="org-form">
 <div class="field">
 <label for="project-name">Project name</label>
@@ -103,32 +180,36 @@
 </div>
 <div class="field">
 <label for="kind">Website type</label>
-<select class="input" id="kind" name="kind">
+<select class="select" id="kind" name="kind">
 <option value="docs">Content</option>
 <option value="store">Store</option>
 <option value="saas">Software</option>
 </select>
 </div>
-<button class="btn" type="submit">Create project in this organisation</button>
+<div class="field">
+<label for="project-org">Organisation</label>
+<select class="select" id="project-org" name="organisation"></select>
+</div>
+<button class="btn" type="submit">Create project</button>
 </form>
 <form id="move-project" class="org-form">
 <div class="field">
 <label for="project">Project to move</label>
-<select class="input" id="project" name="project">
-</select>
+<select class="select" id="project" name="project"></select>
 </div>
 <div class="field">
 <label for="destination">Destination organisation</label>
-<select class="input" id="destination" name="destination">
-</select>
+<select class="select" id="destination" name="destination"></select>
 </div>
 <button class="btn" type="submit">Move project</button>
 </form>
-<p class="muted">Moving a project carries all of its history. Organisations group reports; all installation users can read every project. Projects with history cannot be deleted.</p>
+<p class="org-foot">Moving a project carries all of its history. Projects with history cannot be deleted. Domains, goals and tracking settings live in each project’s Manage page.</p>
 </div>
 </section>
 </div>
+</div>
 </main>
+<div class="visually-hidden" id="announce" aria-live="polite"></div>
 <script src="js/auth.js">
 </script>
 <script src="js/organisations.js">
