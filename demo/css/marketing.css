@@ -88,7 +88,7 @@ code{font-size:.88em;background:var(--color-paper-3);padding:.08em .35em;border-
 .ws-select{margin-left:auto;display:flex;gap:.6em}
 .ws-select span{border:1px solid var(--color-field-edge);border-radius:.7em;padding:.45em .9em;background:var(--color-paper-2);font-size:1em}
 .ws-panel{background:var(--color-paper-2);border-radius:1.2em;box-shadow:0 1px 2px rgb(23 27 18 / .06),0 0 0 1px var(--color-rule);padding:1.5em 1.6em;transition:opacity .6s var(--ease-out),box-shadow .6s var(--ease-out)}
-.ws[data-focus]:not([data-focus=all]) [data-region]:not(.is-focus){opacity:.32}
+.ws[data-focus]:not([data-focus=all]) [data-region]:not(.is-focus):not(:has(.is-focus)){opacity:.32}
 .ws [data-region].is-focus{box-shadow:0 0 0 .2em var(--color-accent),0 1em 3em -1.5em rgb(23 27 18 / .35)}
 .ws-org{grid-column:1/3;display:flex;flex-direction:column;gap:1.1em}
 .ws-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1em}
