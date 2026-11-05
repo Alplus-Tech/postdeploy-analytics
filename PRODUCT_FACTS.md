@@ -43,7 +43,7 @@ Each fact was verified by running the app locally in a browser, by `curl`, or by
 
 **Organisations and projects**
 - An installation contains organisations, each grouping multiple projects. A project retains its existing website and tracking identifier.
-- Administrators create and rename organisations, create projects within them and move projects with their full history. Viewers read all organisations and projects.
+- Administrators create and rename organisations, create projects within them and move projects with their full history. The organisation dropdown exposes Add organisation and Manage organisations; the organisation page has Add project and Manage projects buttons. Add project preselects the current organisation and retains it for consecutive creations. Viewers read all organisations and projects without creation/management actions.
 - Organisation visit summaries use visit starts within the UTC range and sum bounce/duration numerators and denominators; existing traffic counts remain event-based.
 - The organisation home shares the dashboard workspace chrome and leads with pageviews, project visitor-days and goal completions, one UTC daily chart with previous-period comparison, and ranked projects. Visits, bounce and visible duration (with measured coverage) sit under More metrics; per-goal rates with numerator and denominator sit under Goals. Keyboard tooltips and exact tables remain. Administrator management has its own view. Date and exact dimension filters apply to the combined report.
 - Project overviews lead with visitors, pageviews, conversions and, when relevant, revenue, plus acquisition and top pages. Bounce and visible duration, goals, and locations and technology open on demand.

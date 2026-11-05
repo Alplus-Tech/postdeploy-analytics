@@ -14,7 +14,7 @@
 <div class="container">
 <a class="wordmark" href="/organisations" aria-label="PostDeploy Analytics, organisations">
 <img src="icon.svg" width="24" height="24" alt="">
-<span class="logo-word hide-sm">postdeploy<span class="logo-period">.</span></span>
+<span class="logo-word">postdeploy<span class="logo-period">.</span><small>analytics</small></span>
 </a>
 <div class="pop">
 <button type="button" class="btn site-btn" id="org-button" aria-expanded="false" aria-controls="org-menu" aria-label="Choose organisation" disabled>
@@ -25,6 +25,7 @@
 <div class="menu" id="org-menu" hidden>
 <p class="menu-note">Organisations</p>
 <div id="org-list"></div>
+<div id="org-actions" hidden><hr><a href="#add-org">Add organisation</a><a href="#manage">Manage organisations</a></div>
 </div>
 </div>
 <nav class="nav" id="nav" aria-label="Main">
@@ -59,6 +60,8 @@
 <span class="sub" id="subtitle">Loading organisations…</span>
 </div>
 <div class="toolbar" id="toolbar" hidden>
+<a class="btn btn-primary" id="add-project-link" href="#add-project" hidden>Add project</a>
+<a class="btn" id="manage-projects-link" href="#manage-projects" hidden>Manage projects</a>
 <a class="btn" id="insights-link" href="/insights">Insights</a>
 <div class="pop">
 <button type="button" class="btn" id="csv-button" aria-expanded="false" aria-controls="csv-menu">Download CSV

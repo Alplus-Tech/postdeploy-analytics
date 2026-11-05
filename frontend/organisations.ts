@@ -126,8 +126,8 @@ function controls(): void {
 /* ---------- view routing ---------- */
 function route(): void {
   sel = readSelection(location.search, Date.now(), organisations[0]?.id ?? "");
-  const view = admin && location.hash === "#manage" ? "manage" : "report";
-  const key = `${view}|${location.search}`;
+  const view = admin && ["#manage", "#add-org", "#add-project", "#manage-projects"].includes(location.hash) ? "manage" : "report";
+  const key = `${view}|${location.search}|${location.hash}`;
   if (key === routed) return;
   routed = key;
   el("report-view").hidden = view !== "report";
@@ -142,6 +142,12 @@ function route(): void {
     loader.stop(); generation++;
     document.title = "Manage organisations · PostDeploy Analytics";
     options();
+    closeMenus();
+    const target = location.hash === "#add-org" ? "org-name" : location.hash === "#add-project" ? "project-name" : location.hash === "#manage-projects" ? "project" : "rename-target";
+    if (location.hash === "#add-project") select("project-org").value = sel.org;
+    if (location.hash === "#manage") { select("rename-target").value = sel.org; input("rename").value = orgName(sel.org); }
+    el(target).focus();
+    el(target).scrollIntoView({ block: "center" });
     return;
   }
   if (!validOrg()) {
@@ -170,7 +176,7 @@ async function load(push = false): Promise<void> {
   const current = ++generation;
   const address = pageAddress(sel);
   if (push) history.pushState(null, "", address); else history.replaceState(null, "", address);
-  routed = `report|${location.search}`;
+  routed = `report|${location.search}|${location.hash}`;
   closeMenus();
   chrome();
   controls();
@@ -437,7 +443,7 @@ function wireManagement(): void {
       const org = await api<Organisation>("/api/organisations", "POST", { name: values.get("name") });
       sel = { ...sel, org: org.id };
       history.replaceState(null, "", pageAddress(sel) + "#manage");
-      routed = `manage|${location.search}`;
+      routed = `manage|${location.search}|#manage`;
       form.reset();
       return `Created ${org.name}.`;
     },
@@ -449,6 +455,7 @@ function wireManagement(): void {
     "new-project": async (values, form) => {
       await api("/api/sites", "POST", { name: values.get("name"), domain: values.get("domain"), kind: values.get("kind"), organisationId: values.get("organisation") });
       form.reset();
+      select("project-org").value = String(values.get("organisation") ?? sel.org);
       return "Project created.";
     },
     "move-project": async values => {
@@ -521,6 +528,7 @@ async function start(): Promise<void> {
   admin = auth.user.role === "admin";
   el("account-email").textContent = auth.user.email;
   el("nav-manage").hidden = !admin;
+  for (const id of ["org-actions", "add-project-link", "manage-projects-link"]) el(id).hidden = !admin;
   wireMenus();
   wireReport();
   if (admin) wireManagement();

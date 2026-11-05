@@ -396,7 +396,7 @@
     const live = s.empty ? null : ds.liveNow(s);
     const links = [["overview", "Overview"], ["audience", "Audience"], ["conversions", "Conversions"], ["live", "Live"], ["manage", "Manage"]];
     $("#topbar").innerHTML = `<div class="container">
-      <a class="wordmark" href="${hashFor({ route: "overview", sub: "" })}" aria-label="PostDeploy Analytics, overview">${ICON.mark}<span class="logo-word hide-sm">postdeploy<span class="logo-period">.</span></span></a>
+      <a class="wordmark" href="${hashFor({ route: "overview", sub: "" })}" aria-label="PostDeploy Analytics, overview">${ICON.mark}<span class="logo-word">postdeploy<span class="logo-period">.</span><small>analytics</small></span></a>
       <div class="pop">
         <button type="button" class="btn site-btn" data-menu="site" aria-haspopup="true" aria-expanded="${!!state.menus.site}"><span class="site-mark">${esc(initials(s.name))}</span><span class="domain">${esc(s.domain)}</span>${ICON.chevron}</button>
         <div class="menu" role="menu" ${state.menus.site ? "" : "hidden"}>
