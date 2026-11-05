@@ -6,3 +6,5 @@ Disallow: /organisations
 Disallow: /insights
 Disallow: /api/
 Disallow: /demo
+
+Sitemap: https://analytics.postdeploy.dev/sitemap.xml

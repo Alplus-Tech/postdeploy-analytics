@@ -55,7 +55,7 @@ rounded:
   control: "10px"
   inner: "12px"
   pill: "999px"
-  report-preview: "14px"
+  report-preview: "18px"
 spacing:
   3xs: "2px"
   2xs: "4px"
@@ -116,7 +116,7 @@ components:
 
 ## Overview
 
-The adopted postdeploy. identity pairs pale green paper with dark ink, lime accents and rounded sans serif lettering. The public site extends that identity through large, closely spaced headings, open editorial rows and a labelled sample report. The private workspace uses the same materials at a denser scale for charts, filters, tables and settings.
+The adopted postdeploy. identity pairs pale green paper with dark ink, lime accents and rounded sans serif lettering. The public site extends that identity through large, closely spaced headings, ruled editorial rows, an annotated sample workspace that zooms as you read, one ink field and one lime field. The private workspace uses the same materials at a denser scale for charts, filters, tables and settings.
 
 This records the implemented system in `demo/css/tokens.css`, `base.css`, `app.css` and `marketing.css`. Shared tokens remain the foundation; the marketing display scale, report illustration and section composition describe that surface rather than a replacement identity.
 
@@ -147,7 +147,7 @@ The shared palette uses a single lime accent family against green-tinted neutral
 
 Focus blue identifies keyboard focus. Error red and success green express measurement or form status, rather than expanding the brand accent palette. Additional semantic and share-series colors remain defined in `tokens.css`.
 
-The public hosting section has a local pale green wash and border. Its sample-report header has a local near-white wash. Those are surface treatments in `marketing.css`, not additional shared palette families.
+The public site commits colour at region scale. The privacy payload section is an ink field (`--color-ink`) with code-ink text, lime keys and soft-ink notes. The install route section is a full lime field (`--color-accent`) with ink text, darker olive-ink supporting copy (`#323A2A`) and ink buttons: on the public surface lime marks the way to running your own installation and nothing else decorative. Both are surface treatments in `marketing.css`, not new palette families.
 
 **The Brand Continuity Rule.** Preserve the adopted wordmark, icon, font pairing and paper/ink/lime roles when extending either surface.
 
@@ -161,10 +161,10 @@ The public hosting section has a local pale green wash and border. Its sample-re
 
 ### Hierarchy
 
-- **Display:** the frontmatter display role describes the public hero. It is tightly tracked, balanced and constrained to a short measure (10ch on desktop). Mobile uses its own fluid size (`clamp(43px, 10vw, 62px)`) and wider measure (12ch).
-- **Headline:** the public section-heading role is larger and lighter than workspace headings. Feature-row headings use a smaller intermediate size (22px, weight 550).
+- **Display:** public page heroes use `.display`: `clamp(44px, 6.1vw, 84px)`, weight 600, line height 1.02, tracking -0.04em, measure 11–13ch. The closing statement uses the same voice up to 72px.
+- **Headline:** public section headings use `.headline` (`clamp(32px, 3.6vw, 50px)`, weight 560). Tour steps and inner-page chapters use an intermediate size (`clamp(26px, 2.4vw, 34px)`). Install route step numbers are monumental tabular figures (up to 92px) because the sequence matters.
 - **Title:** the frontmatter title role describes the private page heading. Private section and smaller headings step down to 1.125rem and 1rem, retaining weight 650.
-- **Body:** shared body text uses the frontmatter body role. Public hero copy is larger (18px, line height 1.65); feature explanations use a compact prose setting (15px, line height 1.7). Unclassed paragraphs have a maximum measure (65ch).
+- **Body:** shared body text uses the frontmatter body role. Public lead copy is `clamp(17px, 1.4vw, 19px)` at line height 1.6; chapter prose is 16px at 1.7. Unclassed paragraphs have a maximum measure (65ch).
 - **Label:** compact controls and metadata use the shared small-text scale. Numeric reports use tabular figures; they retain their metric labels rather than relying on typography alone to explain values.
 
 The shared type scale ranges from 0.8125rem through 2.027rem. Public display sizes are explicit surface overrides, rather than a global increase to workspace typography.
@@ -173,25 +173,25 @@ The shared type scale ranges from 0.8125rem through 2.027rem. Public display siz
 
 The workspace uses a centered container (maximum 1280px) with gutters that step from 40px to 24px below 60rem and 16px below 40rem. Cards and controls use the shared spacing scale. Tables, metric ledgers and charts retain compact internal rhythm.
 
-The public site uses a centered wrap (maximum 1240px) with 44px horizontal padding. At 1050px this becomes 30px; at 760px it becomes 22px. The desktop hero pairs copy and report in columns (1fr / 1.1fr, gap 60px). Feature and FAQ areas use a narrow introductory column and wider content column. Long rows divide with rules rather than individual cards.
+The public site has four pages (`/`, `/features`, `/self-host`, `/privacy`) sharing one header, footer and stylesheet. It uses a centered wrap (maximum 1240px) with 44px padding, 30px below 1050px and 16px below 560px. The home page opens with a two-column tour: hero copy and tour steps on the left (5fr), and a sticky stage on the right (7fr) whose sample workspace bleeds to the viewport's right edge. Inner pages open with a hero (7fr copy, 5fr ruled index) above a document layout: a sticky 220px table of contents beside chapters that pair prose with a sample figure. Rows divide with rules, not card grids.
 
-Below 760px the public hero, feature rows, hosting section and FAQ stack into a single column. The report straightens, fits the available width and remains centered (maximum 560px). Header section links hide while sign-in remains visible. Closing actions and footer wrap naturally. Public section spacing reduces alongside the column change.
+Below 860px the header links move into a native details menu, the tour becomes one column with the stage sticky at the top above the steps, and chapters, paths and the FAQ stack. The table of contents becomes a wrapping row of pill links. Below 560px buttons in action rows take the full width, the route, facts and requirements become single columns, and the header sign-in shortens to “Sign in”.
 
 Private navigation collapses below 60rem into its existing expandable menu. Private metric and table layouts have their own responsive rules; public breakpoints do not replace them.
 
 ## Elevation & Depth
 
-The system combines tonal layering, thin rules and soft shadows. Workspace panels have a faint contact shadow; menus, dialogs and tooltips use a broader floating shadow. The public report illustration has a more visible diffuse shadow and a slight desktop rotation. That illustration treatment does not apply to operational report panels.
+The system combines tonal layering, thin rules and soft shadows. Workspace panels have a faint contact shadow; menus, dialogs and tooltips use a broader floating shadow. The public workspace illustration has a deeper diffuse shadow and bleeds off the right edge on desktop. That treatment does not apply to operational report panels.
 
 ### Shadow Vocabulary
 
 - **Card:** `--shadow-card` (`0 1px 2px oklch(23% 0.025 268 / 0.04)`), for quiet workspace surfaces.
 - **Pop:** `--shadow-pop` (`0 12px 32px -8px oklch(23% 0.025 268 / 0.18), 0 2px 6px oklch(23% 0.025 268 / 0.06)`), for floating workspace UI.
-- **Public report:** `0 16px 50px -20px rgb(23 27 18 / .22)`, scoped to the marketing illustration.
+- **Public workspace:** `0 30px 70px -40px rgb(23 27 18 / .45), 0 2px 8px rgb(23 27 18 / .05)` on the tour frame, scoped to the marketing illustration. The focused region gains a 0.2em lime ring and a soft drop shadow.
 
 ## Shapes
 
-Workspace panels use broad rounded corners, controls smaller rounded corners and chips full pill ends. Nested surfaces use the inner radius. The public report illustration uses its own intermediate radius. The exact reused values are in frontmatter.
+Workspace panels use broad rounded corners, controls smaller rounded corners and chips full pill ends. Nested surfaces use the inner radius. The public workspace frame uses the card radius (18px, square on the bleeding edge); sample figures use 16px. The exact reused values are in frontmatter.
 
 Dividers remain straight and fine (1px). Charts use rounded line joins and small rounded data marks. The supplied PostDeploy icon remains the identity asset; action arrows use inline stroked SVG.
 
@@ -201,7 +201,7 @@ Dividers remain straight and fine (1px). Charts use rounded line joins and small
 
 Compact workspace controls have a minimum height (36px), small text and modest horizontal padding. Primary buttons use lime with ink text; secondary buttons use white with a strong-rule border; ghost buttons start transparent. Hover moves primary lime deeper and neutral controls toward paper-3. Pressed workspace buttons move down slightly (1px); disabled controls reduce opacity (0.55).
 
-Public actions use the same control shape with more room: a minimum height (52px), weight 600 and wider horizontal padding. Header sign-in uses the smaller public variant (minimum 42px). SVG arrows inherit the label color. Public button background transitions take 180ms using the shared ease-out curve.
+Public actions use the same control shape with more room: a minimum height (52px), weight 600 and wider padding. Primary is lime; secondary is white with a strong rule; on the lime route band the primary becomes ink with paper text and secondaries become translucent white. Header “Team sign in” uses the smaller variant (42px) with a lock icon, and stays visibly separate from the self-host actions (GitHub source, Deploy to Cloudflare). Icons are inline 1.6-stroke SVG.
 
 All keyboard-focusable controls retain the blue focus outline (2px, offset 2px) unless a component supplies its existing inset treatment.
 
@@ -211,7 +211,7 @@ White editable surfaces use the field-edge stroke and shared control radius, wit
 
 ### Navigation
 
-Workspace navigation uses compact pill links, muted ink at rest and white with a subtle inset border for the current page. The translucent sticky top bar keeps its existing blur treatment. Public navigation is open text with underline on hover and an outlined sign-in action; its header remains in normal document flow.
+Workspace navigation uses compact pill links, muted ink at rest and white with a subtle inset border for the current page. The translucent sticky top bar keeps its existing blur treatment. Public navigation is open text in ink-2, with the current page underlined in logo-period lime; it stays in normal document flow and collapses to a native details menu.
 
 ### Chips
 
@@ -219,17 +219,17 @@ Filter chips use soft lime, strong olive text and pill corners, with a minimum h
 
 ### Cards / Containers
 
-Private panels are white, lightly bordered and softly shadowed. Panel headers and metric sections align to the shared spacing rhythm. Public feature and FAQ content use ruled rows directly on the page; the public sample report remains a contained illustration. Keep those surface roles distinct when reusing components.
+Private panels are white, lightly bordered and softly shadowed. Public content uses ruled rows, definition lists and tick lists directly on the page. Sample figures (`.figure`) are white contained illustrations with a hatched “Sample data” tag. Planned work sits in a paper-3 band (`.later-band`) with hollow markers instead of ticks.
 
 ### Report graphics
 
-Metrics use tabular figures, explicit names and muted comparison metadata. Chart accents come from the existing lime family; quiet grid lines support the data. The public illustration visibly says “Sample data” and has an accessible description of its illustrative figures. The interactive demo retains its own explicit sample-data treatment.
+Metrics use tabular figures, explicit names and muted comparison metadata. Chart accents come from the existing lime family; quiet grid lines support the data. Every public illustration is built in HTML and SVG from the real dashboard's vocabulary, uses fictional websites (Fernhill Goods, Lantern UI docs, Quillcast) and visibly says sample data. The home workspace is sized in em from its container (`100cqw / 73.75`) so it scales as one object; the tour zooms into named regions with a transform.
 
 ### FAQ
 
 The public FAQ uses native details/summary disclosure rows, strong-rule dividers and supporting prose beneath the active question. It preserves native keyboard behavior and visible disclosure markers.
 
-Motion uses the incumbent ease-out curve for state changes. The public report's short entrance animation is limited to the illustration; shared reduced-motion rules suppress animation and smooth scrolling when requested.
+Motion uses the incumbent ease-out curve. The one authored moment is the home tour: as each step crosses the middle of the viewport, the workspace translates and scales to that region over 0.9s, other regions dim and the inactive steps fade to half opacity. Without JavaScript the full workspace and every step remain readable. Shared reduced-motion rules remove the transition.
 
 ## Do's and Don'ts
 
@@ -247,4 +247,5 @@ Motion uses the incumbent ease-out curve for state changes. The public report's 
 - **Don't** replace the adopted identity while adding a page or component.
 - **Don't** use bright lime for small body text on pale backgrounds.
 - **Don't** present illustrative report figures as live installation data.
-- **Don't** transfer the marketing illustration's rotation to operational panels.
+- **Don't** transfer the marketing illustration's zoom or ring treatment to operational panels.
+- **Don't** use the lime or ink fields for anything except the install route and the privacy payload.

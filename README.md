@@ -4,7 +4,7 @@
 
 Privacy-first web analytics, designed to run in your own Cloudflare account.
 
-A Cloudflare Worker with a D1 database collects pageviews and goals through a small cookieless tracking script and serves the dashboard and reports. The public homepage explains the product; `/auth` opens installation access, and `/organisations` and `/dashboard` are private workspaces. `/demo?demo=1` offers public sample reports. The same dashboard also opens straight from disk as an offline demo with generated sample data.
+A Cloudflare Worker with a D1 database collects pageviews and goals through a small cookieless tracking script and serves the dashboard and reports. The public homepage, `/features`, `/self-host` and `/privacy` explain the product and installation; `/auth` opens installation access, and `/organisations` and `/dashboard` are private workspaces. `/demo?demo=1` offers public sample reports. The same dashboard also opens straight from disk as an offline demo with generated sample data.
 
 ## Deploy to Cloudflare
 
@@ -90,7 +90,9 @@ Use Node 24.22.x and npm 11.x. [Source distribution](docs/source-distribution.md
 describes the reproducible archive, checksums and clean extracted installation.
 The local candidate includes product sources, lockfile, migrations, operator
 scripts, tests, assets and docs, without Git history or private installation data.
-No public release or real Cloudflare deployment has been performed.
+Audited product source is public on GitHub. The team installation runs on Cloudflare;
+fresh-account button onboarding, real Email delivery and sustained capacity remain
+separate acceptance work.
 
 [Operator acceptance](docs/acceptance.md) provides reproducible native HTTP and
 guarded offline full-history commands, with explicit evidence boundaries.

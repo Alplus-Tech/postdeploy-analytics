@@ -5,8 +5,8 @@ privacy rules, visit/bounce/activity measurement, configurable goals and rates,
 protected CSV and six exact Insights chart families are implemented locally.
 Compact storage and its offline upgrade/recovery tools preserve history. Guided
 self-host setup, backup/restore and reproducible MIT source packaging are also
-implemented and locally exercised. Public availability and real deployment remain
-separate release actions.
+implemented and locally exercised. The team installation is live at
+https://analytics.postdeploy.dev, and audited product source is public on GitHub.
 
 Final acceptance adds runnable native HTTP checks in both layouts and guarded
 read-only full-history probes, with bounded section progress streams for long
@@ -28,7 +28,9 @@ has 1,977,676,800 bytes below the decimal 10 GB hard ceiling, not a universal
 storage margin. Eight GB was an engineering guide, not an accepted release SLA.
 No automatic history shortening, approximate distincts or identity reduction.
 
-Remote provisioning/import/cutover/Email/bcrypt CPU and deployed capacity, native
-window occlusion and public release remain unverified. Later scope: client
+Initial production provisioning/import and password login are verified on the
+existing Workers Paid account. Remote restore/cutover, real Email, Free-plan
+password CPU, deployed capacity and native window occlusion remain unverified.
+Later scope: client
 permissions/logins, public dashboards, scheduled/PDF reports, imports, payment
 integrations, configurable funnels and MCP. Demo controls do not implement these.

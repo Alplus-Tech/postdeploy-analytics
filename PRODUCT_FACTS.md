@@ -80,7 +80,7 @@ Say these only as intent.
 - Fresh-account acceptance of the guided deployment CLI; local installation/restore, process-adapter tests and one existing-account production provisioning/deployment exist; the full button onboarding flow on a separate account remains unverified.
 - Final mixed-workload and deployed acceptance of the two-year capacity target; no lossy daily rollups are implemented.
 - A token-authenticated API and an MCP server, so AI assistants can answer questions about traffic and revenue within the access they are given.
-- Public distribution and repository visibility review remain separate release actions.
+- Product-only source is publicly available on GitHub; private local instruction history and installation data are excluded.
 
 ## Not claimed
 
@@ -159,8 +159,9 @@ revision/file manifest and SHA-256 checksums. Extracted sources can independentl
 install, build, test and rehearse local installation. Built static assets carry
 license notices; the Worker carries the full bcrypt notice in a legal comment.
 Asset provenance limits are recorded in THIRD_PARTY_NOTICES.md. This packages a
-local candidate; it does not clear inherited Git history or certify public/live
-release, remote CPU/Email/import/cutover or capacity variation.
+source candidate. Public GitHub snapshots use separate audited history; private
+local ancestors remain excluded. Packaging does not certify remote CPU, Email,
+restore/cutover or capacity variation.
 
 
 ## Bounded long sections and operator acceptance
@@ -186,4 +187,4 @@ that sustained/deployed capacity is certified.
 
 ## Public site and private workspace
 
-The public homepage explains the product, with explicitly labelled sample report figures and a separate sample-data demo at `/demo?demo=1`. `/auth` signs in to the invitation-only installation; `/organisations`, `/dashboard` and `/insights` require an authenticated session, and report APIs remain protected. Successful login opens the organisation workspace. Public source is available on GitHub using an explicit product-file allowlist, without private configuration or local instruction history. The installation can measure its public homepage and source-download clicks with its own tracker.
+The public site has a homepage, `/features`, `/self-host` and `/privacy`, with explicitly labelled sample report figures and a separate sample-data demo at `/demo?demo=1`. Deploy to Cloudflare is the primary public action; GitHub provides the source. `/auth` signs in to the invitation-only installation; `/organisations`, `/dashboard` and `/insights` require an authenticated session, and report APIs remain protected. Successful login opens the organisation workspace. Public source uses an explicit product-file allowlist, without private configuration or local instruction history. The installation measures public pageviews and deploy, GitHub, demo and team-sign-in clicks with its own tracker. Email remains optional and requires operator configuration before invitations or resets can be delivered.
