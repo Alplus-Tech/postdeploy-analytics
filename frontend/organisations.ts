@@ -359,7 +359,7 @@ function drawSeries(): void {
   }
   host.innerHTML = `<div class="chart" id="chart" tabindex="0" role="img"></div>`;
   const chart = el("chart");
-  const W = Math.max(280, chart.clientWidth);
+  const W = Math.max(240, chart.clientWidth);
   const H = chart.clientHeight || 280;
   const pad = { l: 52, r: 8, t: 10, b: 26 };
   const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;

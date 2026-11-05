@@ -444,3 +444,6 @@ dialog .actions { display: flex; justify-content: flex-end; gap: var(--space-xs)
   .site-btn .domain { max-width: 7ch; }
   .topbar-end .btn-ghost { padding-inline: var(--space-xs); }
 }
+.range-editor { margin-bottom: var(--space-md); }
+.range-editor > summary { width: fit-content; cursor: pointer; }
+.range-editor .custom-range { margin-top: var(--space-xs); margin-bottom: 0; }

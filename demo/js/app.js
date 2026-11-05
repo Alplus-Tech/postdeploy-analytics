@@ -468,12 +468,12 @@
   }
 
   function customRange() {
-    return `<form class="custom-range panel" style="padding:12px 16px;margin-bottom:16px" data-submit="custom">
+    return `<details class="range-editor"><summary class="btn btn-ghost btn-sm">Edit dates</summary><form class="custom-range panel" style="padding:12px 16px" data-submit="custom">
       <div class="field"><label for="from">From</label><input class="input" type="date" id="from" name="from" value="${state.custom.from}" max="${D.isoDay(siteToday())}" min="2025-01-01" required></div>
       <div class="field"><label for="to">To</label><input class="input" type="date" id="to" name="to" value="${state.custom.to}" max="${D.isoDay(siteToday())}" min="2025-01-01" required></div>
       <div class="field"><span class="label">&nbsp;</span><button class="btn" type="submit">Apply range</button></div>
       <p class="help error" id="range-err" role="alert" style="flex-basis:100%;min-height:0"></p>
-    </form>`;
+    </form></details>`;
   }
 
   function filterMenu() {
@@ -553,7 +553,7 @@
   function drawChart(el) {
     const { m, cur, prev, buckets, prevBuckets, gran } = seriesFor(state.metric);
     if (state.metric === "duration" && cur.every(v => v == null)) { el.innerHTML = '<p class="muted">Visible duration is unknown for this period. Activity observations are needed; elapsed event spans are not visible time.</p>'; return; }
-    const W = Math.max(280, el.clientWidth);
+    const W = Math.max(240, el.clientWidth);
     const H = el.clientHeight || 280;
     const pad = { l: 52, r: 8, t: 10, b: 26 };
     const iw = W - pad.l - pad.r;
