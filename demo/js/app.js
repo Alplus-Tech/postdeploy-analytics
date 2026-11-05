@@ -54,11 +54,11 @@
   }
   const RANGES = [["today", "Today"], ["7d", "Last 7 days"], ["30d", "Last 30 days"], ["90d", "Last 90 days"], ["12m", "Last 12 months"], ["custom", "Custom range"]];
   const METRICS = [
-    { id: "visitors", label: "Visitors", f: (t) => fmtCompact(t.visitors), raw: (t) => t.visitors },
+    { id: "visitors", label: "Visitor-days", f: (t) => fmtCompact(t.visitors), raw: (t) => t.visitors },
     { id: "pageviews", label: "Pageviews", f: (t) => fmtCompact(t.pageviews), raw: (t) => t.pageviews },
     { id: "bounceRate", label: "Bounce rate", f: (t) => fmtPct(t.bounceRate, 0), raw: (t) => t.bounceRate, lowerIsBetter: true, rate: true },
     { id: "duration", label: "Visible visit duration", f: (t) => t.duration == null ? "Unknown" : fmtDur(t.duration), raw: (t) => t.duration, rate: true },
-    { id: "conversions", label: "Conversions", f: (t) => fmtCompact(t.conversions), raw: (t) => t.conversions },
+    { id: "conversions", label: "Goal completions", f: (t) => fmtCompact(t.conversions), raw: (t) => t.conversions },
     { id: "revenue", label: "Revenue", f: (t) => money(t.revenue, true), raw: (t) => t.revenue }
   ];
 
@@ -78,6 +78,7 @@
     audienceDim: "source",
     sort: { key: "visitors", dir: -1 },
     chartAsTable: false,
+    reveal: { more: false, goals: false, breakdowns: false },
     failReports: false,
     live: { paused: false, data: null, siteId: null, fresh: new Set(), error: null, selected: null, session: null, kind: "all" },
     team: [
@@ -445,9 +446,9 @@
   function toolbar(title, sub) {
     const r = periods();
     return `<div class="page-head">
-      <div class="title"><h1>${title}</h1><span class="sub">${esc(site().name)}, ${rangeLabel(r.bounds)}${API ? ` in ${esc(site().timezone)} time` : ""}${state.compare !== "off" && r.compareBounds ? `, compared with ${compareLabel()}` : ""}${sub ? ". " + sub : ""}</span></div>
+      <div class="title"><h1>${title}</h1><span class="sub">${esc(site().name)} · ${rangeLabel(r.bounds)}${API ? ` · ${esc(site().timezone)}` : ""}${state.compare !== "off" && r.compareBounds ? ` · vs ${compareLabel()}` : ""}${sub ? ". " + sub : ""}</span></div>
       <div class="toolbar">
-        ${API ? `<a class="btn" href="/insights?${esc(exportUrl("series").split("?")[1].replace(/&dataset=series/, ""))}">Explore insights</a><a class="btn" href="${esc(exportUrl(state.route==="audience"?state.audienceDim:state.route==="conversions"?"goals":"series"))}" title="Selected report and filters, including comparison. Up to 731 days and 10,000 rows. Page/referrer/campaign exports contain the displayed top 100.">Download CSV</a>` : ""}
+        ${API ? `<a class="btn" href="/insights?${esc(exportUrl("series").split("?")[1].replace(/&dataset=series/, ""))}">Insights</a><a class="btn" href="${esc(exportUrl(state.route==="audience"?state.audienceDim:state.route==="conversions"?"goals":"series"))}" title="Selected report and filters, including comparison. Up to 731 days and 10,000 rows. Page/referrer/campaign exports contain the displayed top 100.">Download CSV</a>` : ""}
         <label class="visually-hidden" for="range">Date range</label>
         <select class="select" id="range" data-change="range">${RANGES.map(([id, l]) => `<option value="${id}" ${id === state.range ? "selected" : ""}>${l}</option>`).join("")}</select>
         <label class="visually-hidden" for="cmp">Compare with</label>
@@ -639,15 +640,15 @@
       <div class="panel-head"><h2 id="h-${id}">${opts.title}</h2>${tabs.length > 1 ? `<div class="seg" role="tablist" aria-label="${opts.title} view">${tabs.map(([d, l]) => `<button type="button" role="tab" aria-selected="${d === dim}" data-act="panel-tab" data-panel="${id}" data-dim="${d}">${l}</button>`).join("")}</div>` : ""}</div>
       <div class="panel-body">
         <table class="list"><colgroup><col><col class="c-num"><col class="c-small"></colgroup>
-          <thead><tr><th scope="col">${D.DIMENSIONS[dim]}</th><th scope="col" class="r">${dim === "page" ? "Views" : "Visitors"}</th><th scope="col" class="r">${dim === "page" ? "Share" : "Conv."}</th></tr></thead>
+          <thead><tr><th scope="col">${D.DIMENSIONS[dim]}</th><th scope="col" class="r">${dim === "page" ? "Views" : "Visitor-days"}</th><th scope="col" class="r">${dim === "page" ? "Share" : API ? "Conv. rate" : "Completions"}</th></tr></thead>
           <tbody>${shown.map((row) => {
             const share = row[valueKey] / max;
-            const right = dim === "page" ? fmtPct(row.pageviews / (r.main.totals.pageviews || 1), 0) : fmtPct((row.conversions || 0) / (row.visitors || 1), 1);
+            const right = dim === "page" ? fmtPct(row.pageviews / (r.main.totals.pageviews || 1), 0) : API ? (row.conversionVisitorDays ? fmtPct(row.conversionRate, 1) : "0 eligible") : fmtCompact(row.conversions || 0);
             return `<tr><td class="cell-name"><button type="button" class="rowbtn" ${filtered ? "disabled" : ""} data-act="add-filter" data-dim="${dim}" data-value="${esc(row.name)}" title="${filtered ? "" : `Filter by ${esc(row.name)}`}"><span class="fill" style="width:${(share * 100).toFixed(1)}%"></span><span class="label">${esc(row.name)}</span>${row.note && dim !== "source" ? `<span class="note">${esc(row.note)}</span>` : ""}</button></td><td class="r">${fmtCompact(row[valueKey])}</td><td class="r">${right}</td></tr>`;
           }).join("")}</tbody>
         </table>
       </div>
-      <div class="panel-foot"><span>${rows.length} ${rows.length === 1 ? "row" : "rows"}${filtered ? ", filtered" : ""}</span><a class="btn btn-ghost btn-sm" href="${hashFor({ route: "audience", audienceDim: dim })}">Open full table</a></div>
+      <div class="panel-foot"><span>${filtered ? "Filtered" : ""}</span><a class="btn btn-ghost btn-sm" href="${hashFor({ route: "audience", audienceDim: dim })}">Open full table</a></div>
     </section>`;
   }
 
@@ -655,10 +656,15 @@
     const r = report();
     const t = r.main.totals;
     const prev = r.prev && r.prev.totals;
+    const rate = (g, n) => {
+      const x = t.goalRates?.[g.id];
+      if (!x) return fmtPct(n / (t.visitors || 1), 1);
+      return x.visitorDays ? `${fmtPct(x.rate, 1)} <span class="muted">${fmtInt(x.convertedVisitorDays)}/${fmtInt(x.visitorDays)}</span>` : '<span class="muted">0 eligible</span>';
+    };
     return `<section class="panel" aria-labelledby="h-goals"><div class="panel-head"><h2 id="h-goals">Goals</h2><a class="btn btn-ghost btn-sm" href="${hashFor({ route: "conversions" })}">Funnels and revenue</a></div>
-      <div class="panel-body"><table class="list"><colgroup><col><col class="c-num"><col class="c-num"></colgroup><thead><tr><th scope="col">Goal</th><th scope="col" class="r">Completions</th><th scope="col" class="r" style="white-space:normal">Daily-unique rate</th></tr></thead><tbody>
-      ${r.goals.map((g) => { const n = t.goals[g.id] || 0; const d = prev ? delta(n, prev.goals[g.id]) : null; return `<tr><td><span class="label">${esc(g.name)}${g.archived ? " (archived)" : ""}</span>${g.revenue ? ' <span class="tag revenue">Revenue</span>' : ""}</td><td class="r">${fmtCompact(n)}${d ? ` <span class="${d.cls}" style="font-size:12px">${d.text}</span>` : ""}</td><td class="r">${fmtPct(t.goalRates?.[g.id]?.rate ?? n / (t.visitors || 1), 1)}</td></tr>`; }).join("")}
-      </tbody></table><p class="help">Completion counts include repeats. Rates count visitor-days completing a goal once, divided by visitor-days in the same event window and filters. Across days, visitors count again. Zero visitors gives 0%. Activity-only visits are excluded from this denominator.</p></div></section>`;
+      <div class="panel-body">${r.goals.length ? `<table class="list goal-list"><colgroup><col><col class="c-num"><col class="c-rate"></colgroup><thead><tr><th scope="col">Goal</th><th scope="col" class="r">Completions</th><th scope="col" class="r">Daily-unique rate</th></tr></thead><tbody>
+      ${r.goals.map((g) => { const n = t.goals[g.id] || 0; const d = prev ? delta(n, prev.goals[g.id]) : null; return `<tr><td><span class="label">${esc(g.name)}${g.archived ? " (archived)" : ""}</span>${g.revenue ? ' <span class="tag revenue">Revenue</span>' : ""}</td><td class="r">${fmtCompact(n)}${d ? ` <span class="${d.cls}" style="font-size:12px">${d.text}</span>` : ""}</td><td class="r">${rate(g, n)}</td></tr>`; }).join("")}
+      </tbody></table><p class="help">Completions include repeats. Rate: visitor-days completing ÷ visitor-days, same window and filters.</p>` : '<p class="muted">No goals are set up for this website.</p>'}</div></section>`;
   }
 
   /* ---------- screens ---------- */
@@ -669,14 +675,22 @@
     const r = report();
     const t = r.main.totals;
     const p = r.prev && r.prev.totals;
-    const ledger = METRICS.map((m) => {
-      const d = p ? delta(m.raw(t), m.raw(p), m.lowerIsBetter) : null;
-      return `<button type="button" aria-pressed="${state.metric === m.id}" data-act="metric" data-id="${m.id}"><span class="k">${m.label}</span><span class="v">${m.f(t)}</span><span class="d">${d ? `<span class="${d.cls}">${d.text}</span><span class="vs"> vs ${compareLabel()}</span>` : "&nbsp;"}</span></button>`;
-    }).join("");
+    const showRevenue = t.revenue > 0 || (p && p.revenue > 0) || state.metric === "revenue";
+    const core = METRICS.filter((m) => ["visitors", "pageviews", "conversions"].includes(m.id) || (m.id === "revenue" && showRevenue));
+    const more = METRICS.filter((m) => m.id === "bounceRate" || m.id === "duration" || (m.id === "revenue" && !showRevenue));
+    const moreOpen = state.reveal.more || more.some((m) => m.id === state.metric);
+    const figure = (m) => {
+      const d = p && m.raw(t) != null && m.raw(p) != null ? delta(m.raw(t), m.raw(p), m.lowerIsBetter) : null;
+      const change = d ? `<span class="${d.cls}">${d.text}</span><span class="visually-hidden"> vs ${compareLabel()}</span>` : "";
+      const coverage = m.id === "duration" && t.visits != null ? `${change ? " · " : ""}${fmtInt(t.measuredVisits)} of ${fmtInt(t.visits)} visits measured` : "";
+      return `<button type="button" aria-pressed="${state.metric === m.id}" data-act="metric" data-id="${m.id}"><span class="k">${m.label}</span><span class="v">${m.f(t)}</span><span class="d">${change || coverage ? change + coverage : "&nbsp;"}</span></button>`;
+    };
     const m = METRICS.find((x) => x.id === state.metric);
+    const reveal = (id, label, extra = "") => `<button type="button" class="reveal" data-act="reveal" data-id="${id}" aria-expanded="${state.reveal[id]}" aria-controls="reveal-${id}"><span>${label}</span>${extra}${ICON.chevron}</button>`;
     return head + `<section class="panel" aria-label="Key figures and trend">
-      <div class="ledger" role="group" aria-label="Choose the figure the chart shows">${ledger}</div>
-      <p class="muted" style="padding:0 24px">A bounce has one pageview and no goal. Visible duration excludes hidden time; average over ${t.measuredVisits ?? "simulated"} measured visits of ${t.visits ?? "simulated"}. Unmeasured visits are unknown.</p>
+      <div class="ledger ledger-core" style="--cols:${core.length}" role="group" aria-label="Choose the figure the chart shows">${core.map(figure).join("")}</div>
+      <div class="ledger-bar"><button type="button" class="btn btn-ghost btn-sm" data-act="reveal" data-id="more" aria-expanded="${moreOpen}" aria-controls="reveal-more">More metrics${ICON.chevron}</button></div>
+      <div class="ledger ledger-more" id="reveal-more" role="group" aria-label="More figures for the chart" ${moreOpen ? "" : "hidden"}>${more.map(figure).join("")}</div>
       <div class="chart-wrap">
         <div class="chart-meta"><span class="key"><span class="swatch"></span>${m.label}, ${rangeLabel(periods().bounds)}</span>${r.prev ? `<span class="key"><span class="swatch cmp"></span>${compareLabel().replace(/^./, (c) => c.toUpperCase())}</span>` : ""}<span class="end"><button type="button" class="btn btn-ghost btn-sm" data-act="chart-table" aria-pressed="${state.chartAsTable}">${state.chartAsTable ? "Show chart" : "Show as table"}</button></span></div>
         ${state.chartAsTable ? chartTable() : `<div class="chart" id="chart" tabindex="0" role="img"></div>`}
@@ -685,9 +699,12 @@
     <div class="grid-2" style="margin-top:16px">
       ${listPanel("sources", [["source", "Sources"], ["referrer", "Referrers"], ["campaign", "Campaigns"]], { title: "Acquisition" })}
       ${listPanel("pages", [["page", "Top pages"], ["entry", "Entry pages"]], { title: "Pages" })}
-      ${listPanel("countries", [["country", "Countries"]], { title: "Locations" })}
-      ${listPanel("devices", [["device", "Devices"], ["browser", "Browsers"]], { title: "Technology" })}
-      <div class="span-2">${goalsPanel()}</div>
+    </div>
+    <div class="reveals">
+      ${reveal("goals", "Goals", r.goals.length ? `<span class="muted">${r.goals.length}</span>` : "")}
+      <div id="reveal-goals" ${state.reveal.goals ? "" : "hidden"}>${state.reveal.goals ? goalsPanel() : ""}</div>
+      ${reveal("breakdowns", "Locations and technology")}
+      <div class="grid-2" id="reveal-breakdowns" ${state.reveal.breakdowns ? "" : "hidden"}>${state.reveal.breakdowns ? listPanel("countries", [["country", "Countries"]], { title: "Locations" }) + listPanel("devices", [["device", "Devices"], ["browser", "Browsers"]], { title: "Technology" }) : ""}</div>
     </div>`;
   }
 
@@ -1183,6 +1200,7 @@
     },
     metric(el) { go({ metric: el.dataset.id }); },
     "chart-table"() { state.chartAsTable = !state.chartAsTable; render(); },
+    reveal(el) { const k = el.dataset.id; state.reveal[k] = el.getAttribute("aria-expanded") !== "true"; if (k === "more" && !state.reveal.more && ["bounceRate", "duration"].includes(state.metric)) { go({ metric: "visitors" }); return; } render(); },
     "panel-tab"(el) { state.panelTabs[el.dataset.panel] = el.dataset.dim; render(); },
     "aud-dim"(el) { go({ audienceDim: el.dataset.dim }); },
     sort(el) { const k = el.dataset.key; state.sort = { key: k, dir: state.sort.key === k ? -state.sort.dir : -1 }; render(); },

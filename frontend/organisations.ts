@@ -161,9 +161,10 @@ function navigate(next: Selection): void {
 }
 
 /* ---------- report ---------- */
-const SECTION_TITLES: Record<Section, string> = { summary: "traffic totals", compare: "comparison totals", series: "daily traffic", seriesCompare: "comparison traffic", goals: "goal completions", measurement: "visit measurement" };
-function figure(id: string, label: string, help: string): string {
-  return `<div class="fig" id="fig-${id}"><span class="k">${label}</span><span class="v" id="v-${id}"><span class="org-pending">—</span></span><span class="d" id="d-${id}">${help}</span></div>`;
+let moreOpen = false;
+let goalsOpen = false;
+function figure(id: string, label: string, detail = ""): string {
+  return `<div class="fig" id="fig-${id}"><span class="k">${label}</span><span class="v" id="v-${id}"><span class="org-pending">—</span></span><span class="d" id="d-${id}">${detail}</span></div>`;
 }
 async function load(push = false): Promise<void> {
   const current = ++generation;
@@ -180,19 +181,24 @@ async function load(push = false): Promise<void> {
   const name = orgName(sel.org);
   document.title = `${name} · PostDeploy Analytics`;
   el("heading").textContent = name;
-  el("subtitle").textContent = `${rangeLabel(sel.from, sel.to)} in UTC${compareOn ? `, compared with ${rangeLabel(comparison.get("cmpFrom") ?? "", comparison.get("cmpTo") ?? "")}` : ""}`;
+  el("subtitle").textContent = `${rangeLabel(sel.from, sel.to)} · UTC${compareOn ? ` · vs ${rangeLabel(comparison.get("cmpFrom") ?? "", comparison.get("cmpTo") ?? "")}` : ""}`;
   el("toolbar").hidden = false;
   status("");
-  const pending = "Not loaded yet";
   el("report").innerHTML = `<section class="panel" aria-labelledby="h-figures">
     <h2 id="h-figures" class="visually-hidden">Key figures and daily traffic</h2>
-    <div class="ledger org-ledger">
-      ${figure("pageviews", "Pageviews", `<span id="state-summary">Waiting for exact results…</span>`)}
-      ${figure("visitorDays", "Project visitor-days", compareOn ? `<span id="state-compare">Waiting for comparison…</span>` : "Summed across projects")}
-      ${figure("visits", "Visits", `<span id="state-measurement">Waiting for exact results…</span>`)}
-      ${figure("bounce", "Bounce rate", pending)}
-      ${figure("duration", "Visible visit duration", pending)}
-      ${figure("completions", "Goal completions", `<span id="state-goals">Waiting for exact results…</span>`)}
+    <div class="ledger org-ledger org-core">
+      ${figure("pageviews", "Pageviews")}
+      ${figure("visitorDays", "Project visitor-days")}
+      ${figure("completions", "Goal completions")}
+    </div>
+    <div class="org-more-bar">
+      <button type="button" class="btn btn-ghost btn-sm" id="more-toggle" aria-expanded="${moreOpen}" aria-controls="more-metrics">More metrics<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <span class="org-states"><span id="state-summary" data-name="Totals"></span> <span id="state-compare" data-name="Comparison"></span> <span id="state-goals" data-name="Goals"></span> <span id="state-measurement" data-name="Visits"></span></span>
+    </div>
+    <div class="ledger org-ledger org-secondary" id="more-metrics" ${moreOpen ? "" : "hidden"}>
+      ${figure("visits", "Visits")}
+      ${figure("bounce", "Bounce rate")}
+      ${figure("duration", "Visible visit duration")}
     </div>
     <div class="chart-wrap">
       <div class="chart-meta">
@@ -201,7 +207,7 @@ async function load(push = false): Promise<void> {
           <button type="button" data-metric="visitorDays" aria-pressed="${chartMetric === "visitorDays"}">Visitor-days</button>
         </div>
         <span class="key"><span class="swatch"></span>${escape(rangeLabel(sel.from, sel.to))}</span>
-        ${compareOn ? `<span class="key"><span class="swatch cmp"></span><span id="state-seriesCompare">Waiting for comparison…</span></span>` : ""}
+        ${compareOn ? `<span class="key"><span class="swatch cmp"></span><span id="state-seriesCompare">${escape(rangeLabel(comparison.get("cmpFrom") ?? "", comparison.get("cmpTo") ?? ""))}</span></span>` : ""}
         <span class="end"><button type="button" class="btn btn-ghost btn-sm" id="chart-toggle" aria-pressed="${chartAsTable}">${chartAsTable ? "Show chart" : "Show as table"}</button></span>
       </div>
       <div id="state-series" class="org-chart-state">Waiting for exact results…</div>
@@ -209,23 +215,29 @@ async function load(push = false): Promise<void> {
     </div>
   </section>
   <section class="panel org-block" aria-labelledby="h-projects">
-    <div class="panel-head"><h2 id="h-projects">Projects</h2><span class="muted org-head-note">Ranked by pageviews · open a project for its full report</span></div>
-    <div class="panel-body" id="projects-body"><p class="muted">Projects appear when traffic totals load.</p></div>
+    <div class="panel-head"><h2 id="h-projects">Projects</h2></div>
+    <div class="panel-body" id="projects-body"><p class="muted">—</p></div>
   </section>
-  <section class="panel org-block" aria-labelledby="h-goals">
-    <div class="panel-head"><h2 id="h-goals">Goals</h2></div>
-    <div class="panel-body" id="goals-body"><p class="muted">Goals appear when goal completions load.</p></div>
-  </section>
+  <details class="org-disclose" id="goals-details" ${goalsOpen ? "open" : ""}>
+    <summary><span>Goals</span><span class="muted" id="goals-count"></span></summary>
+    <div class="panel org-goals" id="goals-body"><p class="muted">—</p></div>
+  </details>
   <details class="org-about">
-    <summary>How organisation figures are counted</summary>
+    <summary>Definitions</summary>
     <ul>
-      <li>Organisation dates and chart days use UTC event times. Project reports keep each project’s own timezone, so totals near date edges can differ.</li>
-      <li>Project visitor-days add up each project’s daily visitors in this window. The same person can count in several projects and on several days, so this is not a count of distinct people.</li>
-      <li>Visits count when they start within the UTC range. A bounce is a visit with one pageview and no goal. Visible duration divides total visible time by measured visits; visits without activity measurement stay unknown.</li>
-      <li>Goal completions include repeats. The daily-unique rate divides converted visitor-days by visitor-days, uniting goals per project and local day.</li>
-      <li>A page filter selects matching visits within the period. Moving a project brings its full history into its current organisation.</li>
+      <li>Dates and chart days use UTC event time. Project reports use each project’s own timezone, so totals near date edges can differ.</li>
+      <li>Project visitor-days add each project’s daily visitors. The same person can count in several projects and on several days; this is not a count of people.</li>
+      <li>Visits count when they start in the range. A bounce is one pageview and no goal. Visible duration averages measured visits only; unmeasured visits are unknown.</li>
+      <li>Goal completions include repeats. The daily-unique rate divides converted visitor-days by visitor-days, uniting goals per project and day. No eligible visitor-days shows 0%.</li>
+      <li>A page filter selects matching visits. Moving a project brings its full history into its current organisation.</li>
     </ul>
   </details>`;
+  el("more-toggle").addEventListener("click", () => {
+    moreOpen = !moreOpen;
+    el("more-metrics").hidden = !moreOpen;
+    el("more-toggle").setAttribute("aria-expanded", String(moreOpen));
+  });
+  el("goals-details").addEventListener("toggle", () => { goalsOpen = el<HTMLDetailsElement>("goals-details").open; });
   el("report").querySelectorAll<HTMLButtonElement>("[data-metric]").forEach(b => b.addEventListener("click", () => {
     chartMetric = b.dataset.metric === "visitorDays" ? "visitorDays" : "pageviews";
     el("report").querySelectorAll("[data-metric]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
@@ -244,9 +256,11 @@ async function load(push = false): Promise<void> {
   const enqueue = (section: Section, server: 'summary' | 'series' | 'goals' | 'measurement', query: URLSearchParams): void => {
     const q = new URLSearchParams(query); q.set("section", server);
     const target = el<HTMLElement>(`state-${section}`);
+    const label = target.textContent;
     loader.enqueue(`/api/organisations/${encodeURIComponent(sel.org)}/report?${q}`, target, value => {
       if (current !== generation) return;
       results[section] = (value as OrganisationReport).main;
+      target.textContent = section === "seriesCompare" ? label : "";
       paint(section);
     });
   };
@@ -258,40 +272,40 @@ async function load(push = false): Promise<void> {
   if (compareOn) enqueue("compare", "summary", previous);
 }
 
-function setFigure(id: string, value: string, detail?: string, tone = ""): void {
+function setFigure(id: string, value: string, detail: string, tone = ""): void {
   el(`v-${id}`).textContent = value;
-  if (detail !== undefined) el(`d-${id}`).innerHTML = tone ? `<span class="${tone}">${escape(detail)}</span>` : escape(detail);
+  el(`d-${id}`).innerHTML = tone ? `<span class="${tone}">${escape(detail)}</span>` : escape(detail);
+}
+function delta(id: string, current: number, previous: number | undefined): void {
+  if (previous === undefined) return;
+  const d = change(current, previous);
+  const cmp = reportQuery(sel);
+  el(`d-${id}`).innerHTML = `<span class="${d.tone}">${escape(d.text)}</span><span class="visually-hidden"> compared with ${escape(rangeLabel(cmp.get("cmpFrom") ?? "", cmp.get("cmpTo") ?? ""))}</span>`;
 }
 function paint(section: Section): void {
   const { summary, compare, goals, measurement } = results;
-  const compareOn = reportQuery(sel).has("cmpFrom");
   if (section === "summary" || section === "compare") {
     if (summary) {
-      const d = compare ? change(summary.totals.pageviews, compare.totals.pageviews) : null;
-      setFigure("pageviews", fmt(summary.totals.pageviews), d ? `${d.text} vs previous` : compareOn ? "Comparison pending" : "All projects", d?.tone);
-      if (!compareOn) setFigure("visitorDays", fmt(summary.totals.visitorDays), "Summed across projects");
-      else el("v-visitorDays").textContent = fmt(summary.totals.visitorDays);
+      el("v-pageviews").textContent = fmt(summary.totals.pageviews);
+      el("v-visitorDays").textContent = fmt(summary.totals.visitorDays);
+      delta("pageviews", summary.totals.pageviews, compare?.totals.pageviews);
+      delta("visitorDays", summary.totals.visitorDays, compare?.totals.visitorDays);
       renderProjects(summary, compare);
-    }
-    if (compare) {
-      const d = summary ? change(summary.totals.visitorDays, compare.totals.visitorDays) : null;
-      el("d-visitorDays").innerHTML = d ? `<span class="${d.tone}">${escape(d.text)} vs previous</span>` : escape(`Previous period: ${fmt(compare.totals.visitorDays)}`);
     }
   }
   if (section === "measurement" && measurement) {
     const m = measurement.measurement;
-    setFigure("visits", fmt(m.visits), "Started in this range");
-    setFigure("bounce", pct(m.bounceRate), "One pageview, no goal");
-    setFigure("duration", m.duration === null ? "Unknown" : duration(m.duration), `Average of ${fmt(m.measuredVisits)} measured visits`);
+    setFigure("visits", fmt(m.visits), "");
+    setFigure("bounce", m.visits ? pct(m.bounceRate) : "—", m.visits ? "" : "No visits");
+    setFigure("duration", m.duration === null ? "Unknown" : duration(m.duration), `${fmt(m.measuredVisits)} of ${fmt(m.visits)} visits measured`);
   }
   if (section === "goals" && goals) {
     renderGoals(goals);
-    setFigure("completions", fmt(goals.conversions.completions), `${pct(goals.conversions.rate)} daily-unique rate`);
+    const c = goals.conversions;
+    if (!goals.goals.length) setFigure("completions", "—", "No goals set up");
+    else setFigure("completions", fmt(c.completions), c.visitorDays ? `${pct(c.rate)} daily-unique rate` : "0 eligible visitor-days");
   }
-  if (section === "series" || section === "seriesCompare") {
-    if (section === "seriesCompare") el("state-seriesCompare").textContent = rangeLabel(results.seriesCompare?.buckets[0]?.day ?? "", results.seriesCompare?.buckets.at(-1)?.day ?? "");
-    drawSeries();
-  }
+  if (section === "series" || section === "seriesCompare") drawSeries();
 }
 
 function renderProjects(summary: OrganisationPeriod, compare: OrganisationPeriod | undefined): void {
@@ -302,22 +316,30 @@ function renderProjects(summary: OrganisationPeriod, compare: OrganisationPeriod
     body.innerHTML = `<div class="empty"><h3>No projects in this organisation yet</h3>${admin ? '<a class="btn" href="#manage">Add or move a project</a>' : "<p>An administrator can add or move a project here.</p>"}</div>`;
     return;
   }
-  body.innerHTML = `<div class="org-scroll" tabindex="0" role="region" aria-labelledby="h-projects"><table class="list org-projects">
-    <colgroup><col><col class="c-num"><col class="c-small"><col class="c-num">${compare ? '<col class="c-num">' : ""}</colgroup>
-    <thead><tr><th scope="col">Project</th><th scope="col" class="r">Pageviews</th><th scope="col" class="r">Share</th><th scope="col" class="r">Visitor-days</th>${compare ? '<th scope="col" class="r">Previous</th>' : ""}</tr></thead>
-    <tbody>${summary.projects.map(p => `<tr><th scope="row" class="cell-name"><a class="rowbtn org-rowlink" href="${escape(projectReportAddress(p.id, sel))}"><span class="fill" style="width:${(p.pageviews / max * 100).toFixed(1)}%"></span><span class="label">${escape(p.name)}</span><span class="note">${escape(p.domain)}</span></a></th><td class="r">${fmt(p.pageviews)}</td><td class="r">${total ? pct(p.pageviews / total) : "0.0%"}</td><td class="r">${fmt(p.visitorDays)}</td>${compare ? `<td class="r">${fmt(compare.projects.find(v => v.id === p.id)?.pageviews ?? 0)}</td>` : ""}</tr>`).join("")}</tbody>
-  </table></div>
-  <p class="help org-foot">${summary.projects.length} ${summary.projects.length === 1 ? "project" : "projects"}${total ? "" : " · No pageviews match this period and filter"}${compare ? " · Previous shows pageviews in the comparison period" : ""}</p>`;
+  const previous = (id: string): number => compare?.projects.find(v => v.id === id)?.pageviews ?? 0;
+  const trend = (id: string, now: number): string => {
+    const before = previous(id);
+    if (!before) return now ? "No prior" : "—";
+    const d = change(now, before);
+    return `<span class="${d.tone}">${escape(d.text)}</span>`;
+  };
+  body.innerHTML = `<table class="list org-projects">
+    <colgroup><col><col class="c-num"><col class="c-small">${compare ? '<col class="c-num">' : ""}<col class="c-num"></colgroup>
+    <thead><tr><th scope="col">Project</th><th scope="col" class="r">Pageviews</th><th scope="col" class="r">Share</th>${compare ? '<th scope="col" class="r">Change</th>' : ""}<th scope="col" class="r">Visitor-days</th></tr></thead>
+    <tbody>${summary.projects.map(p => `<tr><th scope="row" class="cell-name"><a class="rowbtn org-rowlink" href="${escape(projectReportAddress(p.id, sel))}"><span class="fill" style="width:${(p.pageviews / max * 100).toFixed(1)}%"></span><span class="label">${escape(p.name)}</span><span class="note">${escape(p.domain)}</span></a></th><td class="r" data-label="Pageviews">${fmt(p.pageviews)}</td><td class="r" data-label="Share">${total ? pct(p.pageviews / total) : "0.0%"}</td>${compare ? `<td class="r" data-label="Change">${trend(p.id, p.pageviews)}</td>` : ""}<td class="r" data-label="Visitor-days">${fmt(p.visitorDays)}</td></tr>`).join("")}</tbody>
+  </table>${total ? "" : '<p class="help org-foot">No pageviews match this period and filter.</p>'}`;
 }
 
 function renderGoals(goals: OrganisationPeriod): void {
   const c = goals.conversions;
   const name = (id: string): string => projects.find(p => p.id === id)?.name ?? id;
-  el("goals-body").innerHTML = goals.goals.length ? `<div class="org-scroll" tabindex="0" role="region" aria-labelledby="h-goals"><table class="table">
-    <thead><tr><th scope="col">Goal</th><th scope="col">Project</th><th scope="col" class="r">Completions</th><th scope="col" class="r">Converted visitor-days</th><th scope="col" class="r">Visitor-days</th><th scope="col" class="r">Daily-unique rate</th></tr></thead>
-    <tbody>${goals.goals.map(g => `<tr><td>${escape(g.name)}</td><td>${escape(name(g.projectId))}</td><td class="r">${fmt(g.completions)}</td><td class="r">${fmt(g.convertedVisitorDays)}</td><td class="r">${fmt(g.visitorDays)}</td><td class="r">${pct(g.rate)}</td></tr>`).join("")}</tbody>
-  </table></div>
-  <p class="help org-foot">All goals: ${fmt(c.completions)} completions · ${pct(c.rate)} daily-unique rate (${fmt(c.convertedVisitorDays)} of ${fmt(c.visitorDays)} project visitor-days). Completions include repeats.</p>` : `<p class="muted">No goals are configured for these projects. Goals are set up in each project’s Manage page.</p>`;
+  const rate = (rate: number, converted: number, eligible: number): string => eligible ? `${pct(rate)} <span class="muted">${fmt(converted)}/${fmt(eligible)}</span>` : '<span class="muted">0 eligible</span>';
+  el("goals-count").textContent = goals.goals.length ? String(goals.goals.length) : "";
+  el("goals-body").innerHTML = goals.goals.length ? `<div class="org-scroll" tabindex="0" role="region" aria-label="Goals table"><table class="table">
+    <thead><tr><th scope="col">Goal</th><th scope="col">Project</th><th scope="col" class="r">Completions</th><th scope="col" class="r">Daily-unique rate <span class="muted">converted/visitor-days</span></th></tr></thead>
+    <tbody>${goals.goals.map(g => `<tr><td>${escape(g.name)}</td><td>${escape(name(g.projectId))}</td><td class="r">${fmt(g.completions)}</td><td class="r">${rate(g.rate, g.convertedVisitorDays, g.visitorDays)}</td></tr>`).join("")}</tbody>
+    <tfoot><tr><th scope="row" colspan="2">All goals</th><td class="r">${fmt(c.completions)}</td><td class="r">${rate(c.rate, c.convertedVisitorDays, c.visitorDays)}</td></tr></tfoot>
+  </table></div>` : `<p class="muted">No goals are set up for these projects. Add them in each project’s Manage page.</p>`;
 }
 
 function drawSeries(): void {

@@ -11,8 +11,8 @@ export class SectionLoader {
       if(signal.aborted) return;
       target.setAttribute('aria-busy','true');
       target.textContent = 'Loading exact results…';
+      const requestController = new AbortController();
       try {
-        const requestController = new AbortController();
         let timer = setTimeout(()=>requestController.abort(),30000);
         const progress = (): void => { clearTimeout(timer); timer=setTimeout(()=>requestController.abort(),30000); };
         try {
@@ -26,7 +26,7 @@ export class SectionLoader {
       } catch(error) {
         if(signal.aborted) return;
         if (!target.isConnected && anchor?.isConnected) anchor.replaceChildren(target);
-        target.textContent = error instanceof Error ? error.message : 'This section could not load.';
+        target.textContent = requestController.signal.aborted ? 'No response for 30 seconds.' : error instanceof Error ? error.message : 'This section could not load.';
         const button=document.createElement('button'); button.type='button'; button.className='btn'; button.textContent='Retry section';
         button.addEventListener('click',()=>{button.disabled=true;this.pending.unshift(run);void this.drain();},{once:true}); target.append(' ',button);
       } finally { target.setAttribute('aria-busy','false'); }

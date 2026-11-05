@@ -1,1 +1,74 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Insights · PostDeploy Analytics</title><link rel="icon" href="icon.svg"><link rel="stylesheet" href="css/app.css"><link rel="stylesheet" href="css/organisations.css"><link rel="stylesheet" href="css/insights.css"></head><body><a class="skip" href="#main">Skip to content</a><header class="topbar"><div class="container"><a class="wordmark" href="/organisations"><img src="icon.svg" width="28" height="28" alt=""><span>postdeploy.</span></a><nav aria-label="Installation"><a href="/organisations">Organisations</a> · <a href="/dashboard#/overview">Project reports</a></nav><button class="btn btn-ghost" id="logout">Sign out</button></div></header><main class="container" id="main" tabindex="-1"><div class="page-head"><h1 id="heading">Insights</h1></div><p id="scope-note" class="org-notes"></p><form id="controls" class="org-controls"><div class="field"><label for="from">From</label><input class="input" id="from" type="date" required></div><div class="field"><label for="to">To</label><input class="input" id="to" type="date" required></div><div class="field"><label for="compare">Compare</label><select class="input" id="compare"><option value="off">Off</option><option value="prev">Previous period</option></select></div><div class="field"><label for="metric">Traffic metric</label><select class="input" id="metric"><option value="pageviews">Pageviews</option><option value="visitorDays">Visitor-days</option><option value="completions">Completions</option></select></div><div class="field"><label for="composition">Stack traffic by</label><select class="input" id="composition"><option value="source">Source</option><option value="project">Project</option></select></div><div class="field"><label for="dimension">Rank by</label><select class="input" id="dimension"><option value="source">Source</option><option value="project">Project</option><option value="entry">Landing page</option><option value="page">Page</option><option value="campaign">Campaign</option></select></div><div class="field wide"><label for="goal">Conversion goal</label><select class="input" id="goal"><option value="">All goals (union)</option></select></div><div class="field wide"><label for="f">Exact filters</label><input class="input" id="f" maxlength="2450" placeholder="source:Direct|page:/pricing" aria-describedby="filter-help"><small id="filter-help">source, page, entry, campaign, country, device, browser or referrer:value. Separate up to eight with |.</small></div><button class="btn btn-primary" type="submit">Apply</button><button class="btn" type="button" id="clear">Clear filters and goal</button></form><p id="status" role="status"></p><div id="report"></div></main><script src="js/auth.js"></script><script src="js/insights.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Insights · PostDeploy Analytics</title>
+<link rel="icon" href="icon.svg">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/insights.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+<div class="container">
+<a class="wordmark" href="/organisations" aria-label="PostDeploy Analytics, organisations">
+<img src="icon.svg" width="24" height="24" alt="">
+<span class="logo-word hide-sm">postdeploy<span class="logo-period">.</span></span>
+</a>
+<nav class="nav" id="nav" aria-label="Main">
+<a id="nav-report" href="/organisations">Organisation</a>
+<a id="nav-insights" href="/insights" aria-current="page">Insights</a>
+<a id="nav-projects" href="/dashboard#/overview">Project reports</a>
+</nav>
+<div class="topbar-end">
+<button type="button" class="btn btn-ghost menu-toggle" id="nav-toggle" aria-expanded="false" aria-controls="nav" aria-label="Menu">
+<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+</button>
+<button type="button" class="btn btn-ghost" id="logout">Sign out</button>
+</div>
+</div>
+</header>
+<main class="container" id="main" tabindex="-1">
+<div class="page-head">
+<div class="title">
+<h1 id="heading">Insights</h1>
+<span class="sub" id="scope-note"></span>
+</div>
+</div>
+<form id="controls" class="ins-controls" novalidate>
+<div class="field">
+<label for="from">From</label>
+<input class="input" id="from" type="date" required>
+</div>
+<div class="field">
+<label for="to">To</label>
+<input class="input" id="to" type="date" required>
+</div>
+<div class="field">
+<label for="compare">Compare</label>
+<select class="select" id="compare">
+<option value="off">Off</option>
+<option value="prev">Previous period</option>
+</select>
+</div>
+<button type="button" class="btn" id="filter-toggle" aria-expanded="false" aria-controls="filter-field">Filters</button>
+<button class="btn btn-primary" type="submit">Apply</button>
+<div class="field ins-filter" id="filter-field" hidden>
+<label for="f">Exact filters</label>
+<input class="input" id="f" maxlength="2450" placeholder="source:Direct|page:/pricing" aria-describedby="filter-help" autocomplete="off" spellcheck="false">
+<span class="help" id="filter-help">dimension:value, up to eight joined with |. Dimensions: source, page, entry, campaign, country, device, browser, referrer.</span>
+</div>
+<p class="help error ins-error" id="range-error" role="alert"></p>
+</form>
+<div class="filters" id="filters" aria-label="Active filters" hidden></div>
+<p id="status" role="status"></p>
+<div id="report"></div>
+</main>
+<div class="visually-hidden" id="announce" aria-live="polite"></div>
+<script src="js/auth.js">
+</script>
+<script src="js/insights.js">
+</script>
+</body>
+</html>
